@@ -312,6 +312,17 @@ them. The panel now passes `GITHUB_TOKEN` and `GH_TOKEN` on, and a short `gh` fa
 **Fix:** quit the panel (`q`) and run `lzr1-panel open` again. Still `ssh`? Run `lzr1-panel prs` to see the
 error, or sign gh in for good with `gh auth login` (it then no longer needs the variable).
 
+### The pull requests section shows `Bad credentials`, `401` or a `{` heading
+
+An old `GITHUB_TOKEN` (or `GH_TOKEN`) is still set where the panel started, and it outranks the login `gh` keeps in
+your keyring. Usually you made a new token and ran `gh auth login` again, but tmux still holds the old one: a tmux
+server keeps the environment it started with and gives it to every new window. Older versions also put the `401`
+reply's lines into the list as if they were pull requests.
+
+**Fix:** update lzr1-panel and restart it (`q`, then `lzr1-panel open`). It now drops a refused token and uses
+`gh`'s own login, and `lzr1-panel doctor` says so. To get rid of the old token everywhere, remove it from your shell's
+startup files and run `tmux set-environment -g -u GITHUB_TOKEN`.
+
 ### The pull requests section is missing
 
 **Fix:** run `lzr1-panel prs`. It fetches them right now and says what is wrong. Usually:
