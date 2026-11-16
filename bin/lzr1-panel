@@ -491,21 +491,30 @@ profile_edit() {
 
 # ---- pull requests --------------------------------------------------------------------------------------------------
 
-# The open pull requests of the GitHub account on this machine, newest first: the account gh is signed in to, or,
-# without gh, the one this machine's SSH key belongs to (public PRs only, and it needs jq). The first line is
-# LOGIN<us>SOURCE; then one record per PR, fields split by \037:
-# repository number title url draft branch review-decision checks updated
-prs_fetch() {
-  local login
-  if command -v gh >/dev/null && gh api graphql -f query='{ viewer { login }
+# prs_gh: gh's search for the open pull requests (see prs_fetch); gh's exit status
+prs_gh() {
+  gh api graphql -f query='{ viewer { login }
       search(query: "is:pr is:open author:@me sort:updated-desc", type: ISSUE, first: 20) { nodes { ... on PullRequest {
         number title url isDraft updatedAt headRefName reviewDecision repository { nameWithOwner }
         commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } } } } }' --jq '
       "\(.data.viewer.login)\u001fgh",
       (.data.search.nodes[] | [.repository.nameWithOwner, (.number | tostring), .title, .url, (.isDraft | tostring),
         .headRefName, (.reviewDecision // ""), (.commits.nodes[0].commit.statusCheckRollup.state // ""), .updatedAt]
-        | join("\u001f"))' 2>/dev/null; then
-    return 0
+        | join("\u001f"))' 2>/dev/null
+}
+
+# The open pull requests of the GitHub account on this machine, newest first: the account gh is signed in to, or,
+# without gh, the one this machine's SSH key belongs to (public PRs only, and it needs jq). The first line is
+# LOGIN<us>SOURCE; then one record per PR, fields split by \037:
+# repository number title url draft branch review-decision checks updated
+prs_fetch() {
+  local login out
+  # gh prints a failed call's error body (a 401's JSON) on stdout: kept aside, it never becomes rows of the list.
+  # A stale GITHUB_TOKEN or GH_TOKEN (a tmux server keeps the one it started with) outranks the login gh keeps in
+  # the keyring: when gh fails with one set, it gets a second try without them.
+  if command -v gh >/dev/null; then
+    out=$(prs_gh) || { [[ -n $GITHUB_TOKEN$GH_TOKEN ]] && out=$(GITHUB_TOKEN= GH_TOKEN= prs_gh) } && [[ -n $out ]] &&
+      { print -r -- "$out"; return 0 }
   fi
   # GitHub greets an SSH key with its account: "Hi LOGIN! You've successfully authenticated, ..."
   login=$(ssh -T -o BatchMode=yes -o ConnectTimeout=5 git@github.com 2>&1 | sed -n 's/^Hi \([^!]*\)!.*/\1/p')
@@ -1750,6 +1759,10 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
   print "\ngithub (the pull requests under your sessions)"
   if [[ ${LZR1_PRS:-1} == 0 ]]; then print "  · hidden (LZR1_PRS=0)"
   elif (( $+commands[gh] )) && login=$(gh api user -q .login 2>/dev/null); then _ok "gh is signed in as $login"
+  elif (( $+commands[gh] )) && [[ -n $GITHUB_TOKEN$GH_TOKEN ]] &&
+       login=$(GITHUB_TOKEN= GH_TOKEN= gh api user -q .login 2>/dev/null); then
+    _ok "gh is signed in as $login (the panel skips the GITHUB_TOKEN/GH_TOKEN GitHub refuses)"
+    _hint "drop the old token: unset it in your shell; in tmux: tmux set-environment -g -u GITHUB_TOKEN"
   else
     login=$(ssh -T -o BatchMode=yes -o ConnectTimeout=5 git@github.com 2>&1 | sed -n 's/^Hi \([^!]*\)!.*/\1/p')
     if [[ -n $login ]] && (( $+commands[jq] )); then
