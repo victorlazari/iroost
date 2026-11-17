@@ -745,3 +745,9 @@ shell hides it.
 - **No cover.** It needs `curl` and ImageMagick (`brew install imagemagick`), and a panel wide enough (about 40
   columns); otherwise the block is the 3-line version (title, bar, buttons).
 - **Clicks.** ⏮ ⏸/▶ ⏭ act on Spotify; a click on the bar seeks. It follows Spotify within 2 seconds.
+
+### The pull request list disappears after ↻ refresh
+
+The refresh button fetches the list again from GitHub. It used to delete the saved list first, so one failed fetch
+(offline, GitHub rate limit, a stale `GITHUB_TOKEN`) left the section empty. Now the last list stays on screen until
+GitHub answers with a new one. If it stays old, run `lzr1-panel doctor`: it shows which GitHub account the panel uses.
