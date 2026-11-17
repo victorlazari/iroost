@@ -525,6 +525,10 @@ prs_fetch() {
       (.draft | tostring), "", "", "", .updated_at] | join("\u001f")'
 }
 
+# prs_stale: the next prs_refresh fetches again, but the list on disk stays until the fetch has a new one: deleting it
+# made one failed fetch (rate limit, offline, a stale token) wipe the section from the panel.
+prs_stale() { [[ -e $STATE/prs ]] && touch -t 197001010000 $STATE/prs; return 0 }
+
 # The cached list, refreshed at most once a minute (the search takes about a second); LZR1_PRS=0 turns it off.
 # A failed search keeps the last list and waits a minute too.
 prs_refresh() {
@@ -1710,7 +1714,7 @@ start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode a
   ;;
 
 prs)  # your open pull requests, fresh
-  rm -f $STATE/prs; prs_refresh
+  prs_stale; prs_refresh
   local it; for it in "${(@0)$(pr_rows ${COLUMNS:-80})}"; do [[ -n $it ]] && print -r -- ${it#*$'\t'}; done
   [[ -s $STATE/prs ]] || print -ru2 -- "lzr1-panel: no GitHub account found (sign in with: gh auth login)"
   ;;
@@ -2595,7 +2599,7 @@ _refresh)  # _refresh ID PORT [DELAY]: refresh the panel with a live spinner in 
     local -a sp=( ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏ )
     trap 'rm -rf $out $STATE/$id.rflock' EXIT HUP TERM INT
     [[ -n $delay ]] && sleep $delay
-    rm -f $STATE/prs
+    prs_stale
     FZF_COLUMNS=$cols $SELF _list $id >$out 2>/dev/null &
     pid=$!
     while kill -0 $pid 2>/dev/null || (( i < 8 )); do
@@ -2829,7 +2833,7 @@ _menu)  # _menu ID KEY: the row's menu (right-click, or m): click an action, or 
     --bind 'left-click:accept,double-click:accept,right-click:abort,q:abort,esc:abort') || exit 0
   act=${pick%%$'\t'*}
   # gh_do WHAT COMMAND...: runs a GitHub change where you can read its answer; the PR list refreshes after it.
-  gh_do() { print -r -- "$1 ..."; shift; "$@" 2>&1; rm -f $STATE/prs; print -n "press a key"; read -k1 -s }
+  gh_do() { print -r -- "$1 ..."; shift; "$@" 2>&1; prs_stale; print -n "press a key"; read -k1 -s }
   case $act in
     open)  browse $purl ;;
     checks) browse $purl/checks ;;
@@ -2864,7 +2868,7 @@ gh pr checks $num, fix it and push." ;;
     pgdec)    $SELF _layout $id - gap-dec $key ;;
     layout)   $SELF _lmenu $id $key ;;
     all)   browse https://github.com/pulls ;;
-    refresh) rm -f $STATE/prs ;;
+    refresh) prs_stale ;;
     opus|sonnet|agy|opencode|term) LZR1_PICKED=1 $SELF _new $act $id $key ;;
     test)  $SELF profile test $KP; print -n "press a key"; read -k1 -s ;;
     edit)  $SELF profile edit $KP; print -n "press a key"; read -k1 -s ;;
