@@ -10,3 +10,9 @@
 - Scripts sent to a profile's machine go through `on` as POSIX `sh`: no bashisms or zsh syntax inside them.
 - Asked to **fix a problem with the panel**: run `lzr1-panel doctor` first, then follow
   [docs/troubleshooting.md](docs/troubleshooting.md). Add any new problem and its fix there.
+
+# Releases
+
+- Every commit merged into `main` is released by `.github/workflows/release.yml` (tag `vX.Y.Z` + GitHub release).
+  The bump comes from the squash-merge title: `type!:` major, `feat` minor, anything else patch. Rules and tests:
+  `.github/scripts/next-version.sh`, `tests/next-version.sh`.

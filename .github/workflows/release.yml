@@ -1,0 +1,58 @@
+name: Release
+
+# Local: a personal public repository with no shared workflow to call. Every commit merged into main
+# gets its own version, tag and GitHub release.
+# Bump from the commit subject (squash merge = the PR title): "type!:" major, "feat" minor, anything else patch.
+# The first release is the VERSION in bin/lzr1-panel; later ones bump the latest v* tag.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One release at a time, in merge order: a queued run never replaces a waiting one's tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ${{ vars.GENERAL_RUNNERS || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    permissions:
+      contents: write # tag and release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Test the version rules
+        run: sh tests/next-version.sh
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A rerun of a commit that already has its release changes nothing.
+          existing=$(git tag --points-at "$SHA" --list 'v*' | head -n1)
+          if [[ -n $existing ]]; then
+            echo "$SHA is already released as $existing"
+            exit 0
+          fi
+          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [[ -z $latest ]]; then
+            version=$(sed -n 's/^VERSION=//p' bin/lzr1-panel | head -n1)
+          else
+            subject=$(git log -1 --format=%s "$SHA")
+            version=$(sh .github/scripts/next-version.sh "${latest#v}" "$subject")
+          fi
+          gh release create "v$version" --target "$SHA" --title "v$version" --generate-notes \
+            ${latest:+--notes-start-tag "$latest"}
+          echo "released v$version"
