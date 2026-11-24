@@ -1,6 +1,6 @@
 #!/bin/sh
 # Behaviour that keeps the sidebar from freezing: a slow helper is cut off, and a closed panel leaves nothing polling.
-P=$(cd "$(dirname "$0")/.." && pwd)/bin/lzr1-panel
+P=$(cd "$(dirname "$0")/.." && pwd)/bin/iroost
 fail=0
 say() { echo "FAIL: $*"; fail=1; }
 
@@ -16,7 +16,7 @@ out=$(zsh "$P" _timeout 5 echo hi); rc=$?
 
 # _spotpoll ID PORT PANELPID: ends at once when the panel was told to quit (its .quit flag), though the panel lives.
 export XDG_CACHE_HOME=$(mktemp -d)
-S=$XDG_CACHE_HOME/lzr1-panel; mkdir -p "$S"
+S=$XDG_CACHE_HOME/iroost; mkdir -p "$S"
 sleep 60 >/dev/null 2>&1 & panel=$!
 : >"$S/77.quit"
 zsh "$P" _spotpoll 77 1 $panel

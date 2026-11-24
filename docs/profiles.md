@@ -1,7 +1,7 @@
-# Creating an lzr1-panel profile
+# Creating an iroost profile
 
 This is the guide an AI assistant (Claude Code, Codex, ChatGPT, Gemini or any other) follows when someone asks to
-**create a new lzr1-panel profile**. People can follow it too, or run `lzr1-panel profile add` and answer its
+**create a new iroost profile**. People can follow it too, or run `iroost profile add` and answer its
 questions.
 
 A profile is one machine whose Claude Code sessions the panel lists: this computer, or another one reached over SSH.
@@ -9,7 +9,7 @@ Profiles cover Claude Code sessions only, for now.
 
 ## What a profile holds
 
-Each profile is a small file, `~/.config/lzr1-panel/profiles/<name>.conf`, readable only by its owner:
+Each profile is a small file, `~/.config/iroost/profiles/<name>.conf`, readable only by its owner:
 
 ```
 type=local                      # local: this computer · ssh: another machine
@@ -36,7 +36,7 @@ Ask these questions one at a time, and wait for each answer. Never guess an answ
 
 1. **Name.** "What should this profile be called?" Lowercase letters, digits and dashes, such as
    `macbook-pro-lazari` or `oracle-server`; a `_` becomes a dash (`my_mac` is saved as `my-mac`). If a profile with
-   that name exists (`lzr1-panel profile list`), say so and ask for another name or whether to replace it.
+   that name exists (`iroost profile list`), say so and ask for another name or whether to replace it.
 2. **Target.** "Is it this computer, or another machine over SSH?"
    - This computer: `--local`.
    - SSH: ask for `user@host`, then the key file (optional; empty means their SSH defaults), then the port
@@ -53,13 +53,13 @@ Then show a one-line summary and ask them to confirm before creating anything.
 This computer:
 
 ```sh
-lzr1-panel profile add macbook-pro-lazari --local --repos /Users/lazari/Github/my-repositories
+iroost profile add macbook-pro-lazari --local --repos /Users/lazari/Github/my-repositories
 ```
 
 Another machine:
 
 ```sh
-lzr1-panel profile add oracle-server --ssh ubuntu@203.0.113.10 --key ~/.ssh/my-server.key \
+iroost profile add oracle-server --ssh ubuntu@203.0.113.10 --key ~/.ssh/my-server.key \
   --repos '~/my-repositories'
 ```
 
@@ -67,8 +67,8 @@ Two profiles on one machine need nothing more: each lists only the sessions insi
 is listed once, and a session in neither folder appears in neither profile.
 
 ```sh
-lzr1-panel profile add lzr1-personal --local --repos ~/Github/lazari
-lzr1-panel profile add lzr1-lerian --local --repos ~/Github/lerian
+iroost profile add personal --local --repos ~/Github/lazari
+iroost profile add lerian --local --repos ~/Github/lerian
 ```
 
 Quote remote paths that start with `~` (`'~/lerian'`), so the local shell does not expand them to the local home.
@@ -80,14 +80,14 @@ the person:
 - **cannot reach it**: check the host, the key and that the key is accepted (`ssh -i KEY user@host true`).
 - **tmux: missing**: install tmux on that machine (`sudo apt-get install -y tmux`, `brew install tmux`).
 - **claude: missing**: install Claude Code there (`curl -fsSL https://claude.ai/install.sh | bash`), sign in once
-  with `claude`, then `lzr1-panel profile remove NAME` and add the profile again.
+  with `claude`, then `iroost profile remove NAME` and add the profile again.
 - **repos ... missing**: the folder does not exist there; ask for the right path.
 
 ## After it is created
 
-- The panel shows the new profile on its next refresh (every 15 seconds) or when it opens: `lzr1-panel open`.
+- The panel shows the new profile on its next refresh (every 15 seconds) or when it opens: `iroost open`.
 - New shells get `cl-<name>-opus NAME` and `cl-<name>-sonnet NAME`, which start a session there without the panel.
-- Change a profile with `lzr1-panel profile edit NAME` (or **edit this profile** in its heading's menu in the
+- Change a profile with `iroost profile edit NAME` (or **edit this profile** in its heading's menu in the
   panel). It asks the name, for SSH the host, key and port, then the repositories folder, each showing its current
   value: Enter keeps it. Piped answers: an empty line keeps a value, `-` empties it. A new name renames the profile;
   an older profile also starts listing only the sessions inside its repositories folder. It runs `profile test` after.
@@ -95,9 +95,9 @@ the person:
 ## Other commands
 
 ```sh
-lzr1-panel profile list          # every profile
-lzr1-panel profile show NAME     # its settings
-lzr1-panel profile edit NAME     # change it
-lzr1-panel profile test NAME     # check it again
-lzr1-panel profile remove NAME
+iroost profile list          # every profile
+iroost profile show NAME     # its settings
+iroost profile edit NAME     # change it
+iroost profile test NAME     # check it again
+iroost profile remove NAME
 ```

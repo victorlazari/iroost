@@ -1,37 +1,37 @@
 #!/usr/bin/env zsh
-# lzr1-panel: Claude Code sessions running in tmux on your machines, listed by profile in a clickable panel on the
+# iroost: Claude Code sessions running in tmux on your machines, listed by profile in a clickable panel on the
 # left, with a viewer on the right that shows the session you pick.
 #
-#   lzr1-panel open                                  panel + viewer (Ghostty split on macOS, else a tmux layout)
-#   lzr1-panel start PROFILE opus|sonnet|agy|opencode|term NAME [args]
+#   iroost open                                      panel + viewer (Ghostty split on macOS, else a tmux layout)
+#   iroost start PROFILE opus|sonnet|agy|opencode|term NAME [args]
 #                                                    start a detached Claude, Agy (--dangerously-skip-permissions) or
 #                                                    opencode (--auto) session on PROFILE; a NAME that is a folder under
 #                                                    the profile's repos opens in it, else in its root; term is a
-#                                                    plain shell with no agent. LZR1_DIR=/folder starts it there
-#   lzr1-panel run [--model M] [--effort E] [args]   Claude in a new tmux session in this folder, attached (print
+#                                                    plain shell with no agent. IROOST_DIR=/folder starts it there
+#   iroost run [--model M] [--effort E] [args]       Claude in a new tmux session in this folder, attached (print
 #                                                    mode, -p, runs plain claude); the panel lists it when this
 #                                                    folder is inside a profile's repositories folder
-#   lzr1-panel run --agy [args]                      the same with agy --dangerously-skip-permissions
-#   lzr1-panel run --opencode [args]                 the same with opencode --auto (its subcommands run plain)
-#   lzr1-panel attach PROFILE NAME                   this terminal into a session
-#   lzr1-panel list                                  print every profile's sessions, then your open PRs
-#   lzr1-panel prs                                   your open pull requests (the GitHub account on this machine)
-#   lzr1-panel doctor                                check everything the panel needs, with the fix for what is missing
-#   lzr1-panel notify                                a sample alert: the tone and a notification, to check them
-#   lzr1-panel profile list|show|add|edit|test|remove manage profiles (lzr1-panel profile help)
-#   lzr1-panel keys                                  the panel's keys
-#                                                    (LZR1_POKEMON=off|text|sprite: a Pokémon per session; docs/pokemon.md)
-#   lzr1-panel splash                                the opening animation (LZR1_SPLASH=0 skips it everywhere)
-#   lzr1-panel remote on [--allow EMAIL] [--ttl 8h]  the panel in a browser on your tailnet: prints a private URL and
-#                                                    password, copies the URL (docs/remote.md); LZR1_REMOTE_TTL (8h),
-#                                                    LZR1_REMOTE_IDLE (30m without input logs a browser out),
-#                                                    LZR1_REMOTE_NOTIFY=0 (no login or wrong-password alerts)
-#   lzr1-panel remote off|status|url|password        end it, show it (with its logins and failures), copy the URL or
+#   iroost run --agy [args]                          the same with agy --dangerously-skip-permissions
+#   iroost run --opencode [args]                     the same with opencode --auto (its subcommands run plain)
+#   iroost attach PROFILE NAME                       this terminal into a session
+#   iroost list                                      print every profile's sessions, then your open PRs
+#   iroost prs                                       your open pull requests (the GitHub account on this machine)
+#   iroost doctor                                    check everything the panel needs, with the fix for what is missing
+#   iroost notify                                    a sample alert: the tone and a notification, to check them
+#   iroost profile list|show|add|edit|test|remove    manage profiles (iroost profile help)
+#   iroost keys                                      the panel's keys
+#                                                    (IROOST_POKEMON=off|text|sprite: a Pokémon per session; docs/pokemon.md)
+#   iroost splash                                    the opening animation (IROOST_SPLASH=0 skips it everywhere)
+#   iroost remote on [--allow EMAIL] [--ttl 8h]      the panel in a browser on your tailnet: prints a private URL and
+#                                                    password, copies the URL (docs/remote.md); IROOST_REMOTE_TTL (8h),
+#                                                    IROOST_REMOTE_IDLE (30m without input logs a browser out),
+#                                                    IROOST_REMOTE_NOTIFY=0 (no login or wrong-password alerts)
+#   iroost remote off|status|url|password            end it, show it (with its logins and failures), copy the URL or
 #                                                    the password again
-#   lzr1-panel remote rotate|who                     a new password (every browser logged out; same URL and expiry),
+#   iroost remote rotate|who                         a new password (every browser logged out; same URL and expiry),
 #                                                    or who is signed in now
 #
-# Profiles live in ~/.config/lzr1-panel/profiles/<name>.conf, outside the repository: hosts, keys and paths are yours.
+# Profiles live in ~/.config/iroost/profiles/<name>.conf, outside the repository: hosts, keys and paths are yours.
 emulate -L zsh
 setopt pipe_fail extended_glob
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -40,23 +40,23 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 VERSION=0.1.0
 SELF=${0:A}
-CONFIG=${LZR1_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/lzr1-panel}
+CONFIG=${IROOST_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/iroost}
 PROFILES=$CONFIG/profiles
-STATE=${XDG_CACHE_HOME:-$HOME/.cache}/lzr1-panel
-PANEL_W=${LZR1_PANEL_WIDTH:-56}  # the panel's columns
+STATE=${XDG_CACHE_HOME:-$HOME/.cache}/iroost
+PANEL_W=${IROOST_PANEL_WIDTH:-56}  # the panel's columns
 # A sprite takes 10 columns: wider by default when sprites are on and can be cut (the mode is lib/pokemon.zsh's).
-{ _pk0=${LZR1_POKEMON:-$(<$CONFIG/pokemon 2>/dev/null)}; [[ -z $LZR1_PANEL_WIDTH && ${_pk0:-sprite} == sprite ]] &&
-  [[ ${LZR1_POKEMON_IMAGES:-auto} == (0|1|halfblocks) || ( -z $TMUX && ( $TERM_PROGRAM == ghostty || -n $GHOSTTY_RESOURCES_DIR || -n $KITTY_WINDOW_ID ) ) ]] &&
+{ _pk0=${IROOST_POKEMON:-$(<$CONFIG/pokemon 2>/dev/null)}; [[ -z $IROOST_PANEL_WIDTH && ${_pk0:-sprite} == sprite ]] &&
+  [[ ${IROOST_POKEMON_IMAGES:-auto} == (0|1|halfblocks) || ( -z $TMUX && ( $TERM_PROGRAM == ghostty || -n $GHOSTTY_RESOURCES_DIR || -n $KITTY_WINDOW_ID ) ) ]] &&
   (( $+commands[curl] && ( $+commands[magick] || $+commands[convert] ) )) && PANEL_W=66; unset _pk0 } 2>/dev/null
-NARROW=${LZR1_NARROW:-$(( PANEL_W + 30 ))}  # a tmux layout under this many columns shows one pane at a time; 0: never
+NARROW=${IROOST_NARROW:-$(( PANEL_W + 30 ))}  # a tmux layout under this many columns shows one pane at a time; 0: never
 [[ $NARROW == <-> ]] || NARROW=$(( PANEL_W + 30 ))
 # The keys the keyboard lock unbinds ($STATE/keylock exists while locked: it outlasts a panel that restarts).
 KEYLOCK_KEYS='n,s,a,c,x,w,f,t,o,p,r,m,l,q,+,=,-,[,],?,esc,enter,up,down,alt-s,alt-p,alt-up,alt-down,shift-up,shift-down'
-MENU_BUTTON=${LZR1_MENU_BUTTON:-right}  # the mouse button that opens a row's menu: right or left
+MENU_BUTTON=${IROOST_MENU_BUTTON:-right}  # the mouse button that opens a row's menu: right or left
 mkdir -p $PROFILES $STATE
 chmod 700 $CONFIG $PROFILES 2>/dev/null  # profiles hold hosts and key paths
 
-die() { print -ru2 -- "lzr1-panel: $*"; exit 1 }
+die() { print -ru2 -- "iroost: $*"; exit 1 }
 
 source ${SELF:h:h}/lib/splash.zsh
 source ${SELF:h:h}/lib/pokemon.zsh
@@ -70,7 +70,7 @@ source ${SELF:h:h}/lib/pokemon.zsh
 #   profile add writes root= and only= equal to repos=; older profiles may differ.
 load() {
   local f=$PROFILES/$1.conf k v
-  [[ -n $1 && -r $f ]] || { print -ru2 -- "lzr1-panel: no profile '$1' (see: lzr1-panel profile list)"; return 1 }
+  [[ -n $1 && -r $f ]] || { print -ru2 -- "iroost: no profile '$1' (see: iroost profile list)"; return 1 }
   P_NAME=$1 P_TYPE= P_HOST= P_KEY= P_PORT= P_ROOT= P_REPOS= P_CLAUDE= P_ONLY= P_OPENCODE= P_AGY=
   while IFS='=' read -r k v; do
     case $k in
@@ -79,8 +79,8 @@ load() {
       opencode) P_OPENCODE=$v ;; agy) P_AGY=$v ;;
     esac
   done <$f
-  [[ $P_TYPE == (local|ssh) ]] || { print -ru2 -- "lzr1-panel: profile '$1' needs type=local or type=ssh"; return 1 }
-  [[ $P_TYPE == local || -n $P_HOST ]] || { print -ru2 -- "lzr1-panel: profile '$1' needs host="; return 1 }
+  [[ $P_TYPE == (local|ssh) ]] || { print -ru2 -- "iroost: profile '$1' needs type=local or type=ssh"; return 1 }
+  [[ $P_TYPE == local || -n $P_HOST ]] || { print -ru2 -- "iroost: profile '$1' needs host="; return 1 }
   : ${P_CLAUDE:=claude} ${P_OPENCODE:=opencode} ${P_AGY:=agy}
   return 0
 }
@@ -146,7 +146,7 @@ on() {
   mkdir -p ~/.ssh/cm
   # One shared connection per machine keeps refreshes and switches fast.
   local -a ssh=(ssh -o BatchMode=yes -o ConnectTimeout=5 -o ControlMaster=auto
-                -o "ControlPath=$HOME/.ssh/cm/lzr1-%C" -o ControlPersist=10m)
+                -o "ControlPath=$HOME/.ssh/cm/iroost-%C" -o ControlPersist=10m)
   [[ -n $P_KEY ]] && ssh+=(-i $P_KEY)
   [[ -n $P_PORT ]] && ssh+=(-p $P_PORT)
   if [[ -n $tty ]]; then
@@ -186,8 +186,8 @@ done
 LIST_SCRIPT='
   now=$(date +%s) us=$(printf "\037") host=$(hostname) only=$(exp "$1"); only=${only%/}
   # tmux escapes control characters in -F output, so its fields split on "|"; the task title comes last, where a "|"
-  # inside it stays put. Session names cannot contain "|" (lzr1-panel refuses them).
-  tmux list-sessions -F "#{session_name}|#{session_attached}|#{session_activity}|#{@rc_url}|#{@lzr1_model}|#{pane_current_path}|#{@lzr1_agent}|#{pane_title}" 2>/dev/null |
+  # inside it stays put. Session names cannot contain "|" (iroost refuses them).
+  tmux list-sessions -F "#{session_name}|#{session_attached}|#{session_activity}|#{@rc_url}|#{@iroost_model}|#{pane_current_path}|#{@iroost_agent}|#{pane_title}" 2>/dev/null |
   while IFS="|" read -r name att act url model dir agent title; do
     if [ -n "$only" ]; then case $dir in "$only"|"$only"/*) ;; *) continue ;; esac; fi
     full=$(tmux capture-pane -p -J -t "=$name:" 2>/dev/null)
@@ -219,7 +219,7 @@ LIST_SCRIPT='
       # The newest link on screen wins: a resumed conversation gets a new one.
       new=$(printf "%s" "$full" | grep -o "https://claude.ai/code/session_[A-Za-z0-9]*" | tail -1)
       if [ -n "$new" ] && [ "$new" != "$url" ]; then url=$new; tmux set-option -t "=$name:" @rc_url "$url"; fi
-      # Sessions lzr1-panel started carry their model; others show it in Claude Code'"'"'s header.
+      # Sessions iroost started carry their model; others show it in Claude Code'"'"'s header.
       [ -n "$model" ] || model=$(printf "%s\n" "$full" | head -8 | grep -oE "Opus|Sonnet|Haiku|Fable" | head -1 | tr "A-Z" "a-z")
       # Claude titles the terminal with its current task, after a spinner glyph.
       title=$(printf "%s" "$title" | sed "s/^[^[:alnum:]]*//")
@@ -264,14 +264,14 @@ LIST_SCRIPT='
 
 profile_help() {
   cat <<'EOF'
-lzr1-panel profile list
-lzr1-panel profile show NAME
-lzr1-panel profile add                                   guided: asks for everything
-lzr1-panel profile add NAME --local --repos PATH [--claude PATH] [--agy PATH] [--opencode PATH]
-lzr1-panel profile add NAME --ssh USER@HOST --repos PATH [--key FILE] [--port N] [--claude PATH] [--agy PATH] [--opencode PATH]
-lzr1-panel profile edit NAME                             the same questions, each showing its current value
-lzr1-panel profile test NAME                             reach it, find tmux, claude, agy and opencode, check the folders
-lzr1-panel profile remove NAME
+iroost profile list
+iroost profile show NAME
+iroost profile add                                   guided: asks for everything
+iroost profile add NAME --local --repos PATH [--claude PATH] [--agy PATH] [--opencode PATH]
+iroost profile add NAME --ssh USER@HOST --repos PATH [--key FILE] [--port N] [--claude PATH] [--agy PATH] [--opencode PATH]
+iroost profile edit NAME                             the same questions, each showing its current value
+iroost profile test NAME                             reach it, find tmux, claude, agy and opencode, check the folders
+iroost profile remove NAME
 
 NAME: lowercase letters, digits and dashes (oracle-server, macbook-pro-lazari); a _ becomes a dash.
 --repos: the folder holding your repositories. A profile opens and lists only the sessions inside --repos, so two
@@ -311,7 +311,7 @@ profile_name() {
   REPLY=${1//_/-} WHY=
   [[ $REPLY == $1 ]] || print -r -- "  using $REPLY"
   if [[ $REPLY != [a-z0-9][a-z0-9-]# ]]; then WHY="profile name: lowercase letters, digits and dashes"
-  elif [[ -e $PROFILES/$REPLY.conf ]]; then WHY="profile '$REPLY' exists (lzr1-panel profile remove $REPLY first)"
+  elif [[ -e $PROFILES/$REPLY.conf ]]; then WHY="profile '$REPLY' exists (iroost profile remove $REPLY first)"
   fi
   [[ -z $WHY ]]
 }
@@ -333,7 +333,7 @@ profile_add() {
   askd() { ask $1 "$2 [$3]: "; [[ -n ${(P)1} ]] || typeset -g $1=$3 }
   if (( $# == 0 )); then
     # Guided: the same questions an agent asks, then the same command. Enter takes the suggestion in [brackets].
-    print "New lzr1-panel profile (Claude Code sessions only, for now)"
+    print "New iroost profile (Claude Code sessions only, for now)"
     print "  A profile is one machine whose sessions the panel lists."
     dflt=${${(L)$(hostname -s 2>/dev/null)}//[^a-z0-9-]/-}
     while :; do
@@ -393,7 +393,7 @@ profile_add() {
   [[ -n $agy ]] || agy=$(on 'command -v agy 2>/dev/null || { [ -x "$HOME/.local/bin/agy" ] && echo "$HOME/.local/bin/agy"; }' 2>/dev/null)
   [[ -n $opencode ]] || opencode=$(on 'command -v opencode 2>/dev/null || { [ -x "$HOME/.opencode/bin/opencode" ] && echo "$HOME/.opencode/bin/opencode"; }' 2>/dev/null)
   {
-    print -r -- "# lzr1-panel profile: $name (written $(date +%Y-%m-%d)). Keep it out of git."
+    print -r -- "# iroost profile: $name (written $(date +%Y-%m-%d)). Keep it out of git."
     print -r -- "type=$type"
     [[ -n $host ]] && print -r -- "host=$host"
     [[ -n $key ]] && print -r -- "key=$key"
@@ -450,7 +450,7 @@ profile_edit() {
   fi
   t=$PROFILES/$name.conf.new
   if ! { {
-    print -r -- "# lzr1-panel profile: $name (edited $(date +%Y-%m-%d)). Keep it out of git."
+    print -r -- "# iroost profile: $name (edited $(date +%Y-%m-%d)). Keep it out of git."
     print -r -- "type=$P_TYPE"
     [[ $P_TYPE == ssh ]] && { print -r -- "host=$host"; [[ -n $key ]] && print -r -- "key=$key"
                               [[ -n $port ]] && print -r -- "port=$port" }
@@ -529,10 +529,10 @@ prs_fetch() {
 # made one failed fetch (rate limit, offline, a stale token) wipe the section from the panel.
 prs_stale() { [[ -e $STATE/prs ]] && touch -t 197001010000 $STATE/prs; return 0 }
 
-# The cached list, refreshed at most once a minute (the search takes about a second); LZR1_PRS=0 turns it off.
+# The cached list, refreshed at most once a minute (the search takes about a second); IROOST_PRS=0 turns it off.
 # A failed search keeps the last list and waits a minute too.
 prs_refresh() {
-  [[ ${LZR1_PRS:-1} == 0 ]] && return
+  [[ ${IROOST_PRS:-1} == 0 ]] && return
   local -a fresh=( $STATE/prs(Nms-60) )
   (( $#fresh )) && return
   prs_fetch >$STATE/prs.$$ || { rm -f $STATE/prs.$$; touch $STATE/prs; return }
@@ -553,7 +553,7 @@ _ago() {
 
 # A PR row's key is +pr/URL; the section heading's is +pr/; scrollbar step rows are +pr:up/ and +pr:dn/.
 pr_rows() {  # pr_rows WIDTH [ID]: the PR section's fzf items, after the sessions (Option A split-pane sash + scrollbar)
-  [[ ${LZR1_PRS:-1} == 0 || ! -s $STATE/prs ]] && return
+  [[ ${IROOST_PRS:-1} == 0 || ! -s $STATE/prs ]] && return
   local W=$1 id=$2 D=$'\e[90m' B=$'\e[1m' C=$'\e[36m' Y=$'\e[33m' G=$'\e[32m' E=$'\e[31m' M=$'\e[37m' R=$'\e[0m'
   local -a got=( ${(f)"$(<$STATE/prs)"} )
   local total=$(( $#got - 1 )); (( total <= 0 )) && return
@@ -636,7 +636,7 @@ ghostty() { print -r -- "tell application \"Ghostty\""$'\n'"$1"$'\n'"end tell" |
 # would be missing and the pull requests would fall back to your SSH key's public ones.
 genv() {
   local v; local -a kv
-  for v in GITHUB_TOKEN GH_TOKEN GH_HOST LZR1_CONFIG LZR1_PRS LZR1_MENU_BUTTON LZR1_PANEL_WIDTH LZR1_NOTIFY LZR1_SOUND; do
+  for v in GITHUB_TOKEN GH_TOKEN GH_HOST IROOST_CONFIG IROOST_PRS IROOST_MENU_BUTTON IROOST_PANEL_WIDTH IROOST_NOTIFY IROOST_SOUND; do
     [[ -n ${(P)v} ]] && kv+=( "\"$v=${${(P)v}//(#m)[\\\"]/\\$MATCH}\"" )
   done
   (( $#kv )) && print -r -- "set environment variables of cfg to {${(j:, :)kv}}"
@@ -662,8 +662,8 @@ clip() {
 _cut() { if (( ${#1} > $2 )); then REPLY="${1[1,$2-1]}…"; else REPLY=$1; fi }
 
 # notify_alerts RECORD...: list_rows' alerts ("kind<US>profile<US>session<US>model<US>repo<US>branch<US>text") on the
-# computer running the panel: one tone however many there are (LZR1_SOUND: 0 off, or a sound file), a notification
-# each, up to 3 (LZR1_NOTIFY=0 off). Each notification names the tmux session, agent/model, profile/folder and the
+# computer running the panel: one tone however many there are (IROOST_SOUND: 0 off, or a sound file), a notification
+# each, up to 3 (IROOST_NOTIFY=0 off). Each notification names the tmux session, agent/model, profile/folder and the
 # detailed agent request or output. The text comes from a session's screen: it reaches the notifier as an argument
 # only, never inside a script or a command line.
 notify_alerts() {
@@ -672,7 +672,7 @@ notify_alerts() {
   _tone
   if [[ $reply[1] == bell ]]; then { print -n '\a' >/dev/tty } 2>/dev/null
   elif (( $#reply )); then $reply >/dev/null 2>&1 &!; fi
-  [[ ${LZR1_NOTIFY:-1} == 0 ]] && return 0
+  [[ ${IROOST_NOTIFY:-1} == 0 ]] && return 0
   recs=( "$@" ); (( $# > 3 )) && recs=( "${(@)recs[1,2]}" )
   for r in "$@"; do
     flds=( "${(@ps:\037:)r}" )
@@ -687,16 +687,16 @@ notify_alerts() {
       ttl="tmux: $s${mdl:+ ($mdl)} — $verb"
       sub="profile: $p${repo:+ · $repo}${br:+ ($br)}"
       text=${text//[[:cntrl:]]/}; _cut "${text:-waiting for your input in tmux session $s ($p)}" 240
-      _notify_one "$ttl" "$sub" "$REPLY" lzr1-$p-$s
+      _notify_one "$ttl" "$sub" "$REPLY" iroost-$p-$s
     else more+=( "$p/$s${mdl:+ ($mdl)}" ); fi
   done
-  if (( $#more )); then _cut "${(j:, :)more}" 240; _notify_one "$#more more tmux sessions need you" lzr1-panel "$REPLY" lzr1-more; fi
+  if (( $#more )); then _cut "${(j:, :)more}" 240; _notify_one "$#more more tmux sessions need you" iroost "$REPLY" iroost-more; fi
 }
 
-# _tone: what plays the alert tone here (LZR1_SOUND), as a command into reply: "bell" for the terminal bell, empty
+# _tone: what plays the alert tone here (IROOST_SOUND), as a command into reply: "bell" for the terminal bell, empty
 # for none. notify_alerts plays it; doctor reports it.
 _tone() {
-  local snd=${LZR1_SOUND:-1}; reply=()
+  local snd=${IROOST_SOUND:-1}; reply=()
   if [[ $snd == 0 ]]; then :
   elif [[ $OSTYPE == darwin* ]]; then
     [[ $snd == 1 ]] && snd=/System/Library/Sounds/Glass.aiff
@@ -704,9 +704,9 @@ _tone() {
   else
     [[ $snd == 1 ]] && snd=/usr/share/sounds/freedesktop/stereo/complete.oga
     if [[ -r $snd ]] && (( $+commands[paplay] )); then reply=( paplay $snd )
-    elif [[ ${LZR1_SOUND:-1} == 1 ]] && (( $+commands[canberra-gtk-play] )); then reply=( canberra-gtk-play -i complete )
+    elif [[ ${IROOST_SOUND:-1} == 1 ]] && (( $+commands[canberra-gtk-play] )); then reply=( canberra-gtk-play -i complete )
     elif [[ -r $snd ]] && (( $+commands[canberra-gtk-play] )); then reply=( canberra-gtk-play -f $snd )
-    elif [[ ${LZR1_SOUND:-1} == 1 ]]; then reply=( bell ); fi
+    elif [[ ${IROOST_SOUND:-1} == 1 ]]; then reply=( bell ); fi
   fi
 }
 
@@ -722,7 +722,7 @@ _notify_one() {
     fi
   elif [[ -n $DISPLAY$WAYLAND_DISPLAY ]] && command -v notify-send >/dev/null; then
     local -a a=( "${@[1,3]}" ); a=( "${(@)${(@)${(@)a//&/&amp;}//\</&lt;}//\>/&gt;}" )  # most daemons read markup
-    notify-send -a lzr1-panel -- $a[1] "${a[2]:+$a[2] — }$a[3]" >/dev/null 2>&1
+    notify-send -a iroost -- $a[1] "${a[2]:+$a[2] — }$a[3]" >/dev/null 2>&1
   fi
   return 0
 }
@@ -763,13 +763,13 @@ list_rows() {
   local -a names=( $(profiles) )
   if (( ! $#names )); then
     print -rn -- $'\t'"no profiles yet"$'\0'
-    print -rn -- $'-/\t'$'\e[90m'"run: lzr1-panel profile add"$'\e[0m\0'
+    print -rn -- $'-/\t'$'\e[90m'"run: iroost profile add"$'\e[0m\0'
     return
   fi
   zmodload zsh/datetime
   local tmp=$(mktemp -d) p snap=$EPOCHREALTIME  # what this refresh saw is as old as its start (_pos's are 0.8s apart)
   local -a down
-  if [[ -n $LZR1_CACHED ]]; then
+  if [[ -n $IROOST_CACHED ]]; then
     for p in $names; do
       if [[ -r $STATE/raw-$p && ! -e $STATE/down-$p ]]; then cp $STATE/raw-$p $tmp/$p.out
       else : >$tmp/$p.fail; fi
@@ -803,7 +803,7 @@ list_rows() {
   _remote_read && _ours "$RS[gwpid]" gw $RS[uuid] && web=' · ⇄ web'
   local -a needart pkrows
   if [[ $pkm == sprite ]] && { ! (( $+commands[curl] && ( $+commands[magick] || $+commands[convert] ) )) ||
-     { ! _pk_kitty_ok && [[ ${LZR1_POKEMON_IMAGES:-auto} != (0|halfblocks) ]] } }; then pkm=text; fi
+     { ! _pk_kitty_ok && [[ ${IROOST_POKEMON_IMAGES:-auto} != (0|halfblocks) ]] } }; then pkm=text; fi
   if [[ $pkm != off ]]; then
     mw=5
     for f in $STATE/pokemon/*/*(N); do PK_TAKEN[$(<$f)]=1; done 2>/dev/null
@@ -813,7 +813,7 @@ list_rows() {
   if [[ -n $1 ]]; then
     # One refresh at a time compares and writes; one that cannot get the lock in 2s skips tracking this time (the
     # next refresh catches up). Fast cached layout redraws skip tracking.
-    if [[ -z $LZR1_CACHED ]] && _seen_lock; then
+    if [[ -z $IROOST_CACHED ]] && _seen_lock; then
       track=1; setopt local_options local_traps
       trap '_seen_unlock; exit 143' TERM HUP INT; TRAPEXIT() { _seen_unlock }
     fi
@@ -857,7 +857,7 @@ list_rows() {
     (( pidx++ ))
     load $p 2>/dev/null; kind=$P_TYPE
     got=( ${(f)"$(<$tmp/$p.out)"} )
-    [[ -z $LZR1_CACHED ]] && cp $tmp/$p.out $STATE/raw-$p  # the menu reads a session's details from here
+    [[ -z $IROOST_CACHED ]] && cp $tmp/$p.out $STATE/raw-$p  # the menu reads a session's details from here
     profile_gap $p $pidx; pgap=$REPLY
     local pgnl=${(pl:pgap::\n:)} ginfo=
     (( (pidx == 1 && pgap > 0) || (pidx > 1 && pgap != 1) )) && ginfo=" ↕${pgap}L"
@@ -952,7 +952,7 @@ list_rows() {
     if (( $+commands[setsid] )); then det=( setsid ); elif (( $+commands[perl] )); then det=( perl -e 'setpgrp; exec @ARGV' ); fi
     for (( f = 1; f <= $#uf; f++ )); do mkdir -p $uf[f]:h; print -r -- $uv[f] >$uf[f]; done
     if (( $#alerts )); then
-      _tone; [[ $reply[1] == bell ]] && { { print -n '\a' >/dev/tty } 2>/dev/null; snd=( LZR1_SOUND=0 ) }
+      _tone; [[ $reply[1] == bell ]] && { { print -n '\a' >/dev/tty } 2>/dev/null; snd=( IROOST_SOUND=0 ) }
       { env $snd $det $SELF _notify $alerts </dev/null >/dev/null 2>&1 &! }
     fi
     for (( f = 1; f <= $#sf; f++ )); do mkdir -p $sf[f]:h; print -r -- $sv[f] >$sf[f]; done
@@ -961,8 +961,8 @@ list_rows() {
     _seen_unlock
   fi
   # The browser strip's snapshot, and the art it and the sprites need (cut in the background, off fzf's pipe).
-  [[ -n $web && -n $1 && -z $LZR1_CACHED ]] && _pk_snapshot $pkrows
-  if [[ -z $LZR1_CACHED ]] && (( $#needart )) && [[ $pkm == sprite || -n $web ]] && (( $+commands[curl] && ( $+commands[magick] || $+commands[convert] ) )); then
+  [[ -n $web && -n $1 && -z $IROOST_CACHED ]] && _pk_snapshot $pkrows
+  if [[ -z $IROOST_CACHED ]] && (( $#needart )) && [[ $pkm == sprite || -n $web ]] && (( $+commands[curl] && ( $+commands[magick] || $+commands[convert] ) )); then
     local -a pdet=(); local an
     if (( $+commands[setsid] )); then pdet=( setsid ); elif (( $+commands[perl] )); then pdet=( perl -e 'setpgrp; exec @ARGV' ); fi
     for an in ${(u)needart[1,3]}; do { $pdet $SELF _art $an </dev/null >/dev/null 2>&1 &! }; done
@@ -989,7 +989,7 @@ _fast_reload() {
   local id=$1 port=$2 key=$3 out=$STATE/$1.rf.$$ i=0 line pos=
   local cols=${FZF_COLUMNS:-${COLUMNS:-$PANEL_W}} lines=${FZF_LINES:-${LINES:-40}}
   [[ -n $id && -n $port && $port != - ]] || return 0
-  LZR1_CACHED=1 FZF_COLUMNS=$cols FZF_LINES=$lines $SELF _list $id >$out 2>/dev/null
+  IROOST_CACHED=1 FZF_COLUMNS=$cols FZF_LINES=$lines $SELF _list $id >$out 2>/dev/null
   if [[ -s $out ]]; then
     mv -f $out $STATE/$id.cache
     if [[ -n $key ]]; then
@@ -1006,7 +1006,7 @@ _fast_reload() {
   fi
 }
 
-# remote_last ID KEY: a browser's layout (open, LZR1_REMOTE) shows KEY: the remote's .last keeps it for a reconnect
+# remote_last ID KEY: a browser's layout (open, IROOST_REMOTE) shows KEY: the remote's .last keeps it for a reconnect
 remote_last() {
   local u; [[ -r $STATE/$1.remote ]] || return 0
   u=$(<$STATE/$1.remote)
@@ -1015,25 +1015,25 @@ remote_last() {
 }
 
 # remote_view ID KEY: a browser's layout names what its viewer shows, KEY and its state (work, wait or idle), in its
-# title (_fit sets it as lzr1|list or lzr1|view|KEY|STATE): the phone's header reads it (gateway/client.js). The key is
+# title (_fit sets it as iroost|list or iroost|view|KEY|STATE): the phone's header reads it (gateway/client.js). The key is
 # parsed here, not with split_key, so the caller's KP and KS stay as they were.
 remote_view() {
   local p=${2%%/*} n=${2#*/} st= line
-  local -a T=(tmux -L lzr1)
+  local -a T=(tmux -L iroost)
   if [[ -r $STATE/raw-$p ]]; then
     for line in ${(f)"$(<$STATE/raw-$p)"}; do
       [[ ${line%%$'\037'*} == $n ]] && { st=${${line#*$'\037'}%%$'\037'*}; break }
     done
   fi
-  $T set -t "=lzr1-$1:" @lzr1_view "$2|$st" 2>/dev/null || return 0
-  $T list-clients -t "=lzr1-$1" -F '#{client_name}' 2>/dev/null | while read -r line; do
+  $T set -t "=iroost-$1:" @iroost_view "$2|$st" 2>/dev/null || return 0
+  $T list-clients -t "=iroost-$1" -F '#{client_name}' 2>/dev/null | while read -r line; do
     $T refresh-client -t "$line" 2>/dev/null
   done
 }
 
 # zoom_pane PANE: PANE alone in its window (the narrow layout, _fit), with the keyboard
 zoom_pane() {
-  local -a T=(tmux -L lzr1)
+  local -a T=(tmux -L iroost)
   $T select-pane -Z -t $1 2>/dev/null || return 0  # -Z: a zoomed window stays zoomed, on PANE now
   [[ $($T display -p -t $1 '#{window_zoomed_flag}') == 1 ]] || $T resize-pane -Z -t $1 2>/dev/null
   status_sync $($T display -p -t $1 '#{session_name}' 2>/dev/null)
@@ -1043,9 +1043,9 @@ zoom_pane() {
 # viewer): never over the panel itself, where it used to stay after a tap on it, and never in a browser's layout, whose
 # page has its own back button (gateway/client.js).
 status_sync() {
-  local s=$1 id=${1#lzr1-} on=off me
-  local -a T=(tmux -L lzr1)
-  [[ $s == lzr1-<-> && -r $STATE/$id.me ]] || return 0
+  local s=$1 id=${1#iroost-} on=off me
+  local -a T=(tmux -L iroost)
+  [[ $s == iroost-<-> && -r $STATE/$id.me ]] || return 0
   me=$(<$STATE/$id.me)
   if [[ ! -r $STATE/$id.remote && $($T display -p -t "=$s:" '#{window_zoomed_flag}' 2>/dev/null) == 1 \
         && $($T display -p -t "=$s:" '#{pane_id}' 2>/dev/null) != $me ]]; then on=on; fi
@@ -1057,8 +1057,8 @@ status_sync() {
 
 # to_panel ID: back to the panel: alone in a narrow layout, beside the viewer again in a wide one after `full`.
 to_panel() {
-  local id=$1 s=lzr1-$1 me
-  local -a T=(tmux -L lzr1)
+  local id=$1 s=iroost-$1 me
+  local -a T=(tmux -L iroost)
   [[ -r $STATE/$id.me ]] && me=$(<$STATE/$id.me)
   [[ -n $me ]] || return 0
   if [[ -e $STATE/$id.narrow ]]; then
@@ -1071,7 +1071,7 @@ to_panel() {
 
 viewer_detach() {  # viewer_detach ID KEY: detach the viewer's client from KEY's machine
   split_key $2; load $KP 2>/dev/null || return 0
-  on 'c=$(cat "$HOME/.cache/lzr1-panel-viewer/$1" 2>/dev/null); [ -n "$c" ] && tmux detach-client -t "$c" 2>/dev/null; true' $1
+  on 'c=$(cat "$HOME/.cache/iroost-viewer/$1" 2>/dev/null); [ -n "$c" ] && tmux detach-client -t "$c" 2>/dev/null; true' $1
 }
 
 # If the agent exits (Ctrl-C twice, /exit, a crash) its session stays, and Enter runs RESUME: the same conversation.
@@ -1083,7 +1083,7 @@ _keep() {  # _keep AGENT FIRST RESUME: the session's command, in REPLY
 
 # ---- remote: the panel on your tailnet (docs/remote.md) -------------------------------------------------------------
 
-# ttyd runs a fresh `lzr1-panel open` per browser on a private Unix socket; lzr1-remote-gw (gateway/) checks the
+# ttyd runs a fresh `iroost open` per browser on a private Unix socket; iroost-remote-gw (gateway/) checks the
 # Tailscale login against the allowlist and the password, then proxies to it; tailscale serve (never funnel) publishes
 # the gateway at https://<machine>.<tailnet>.ts.net/<uuid>/. The gateway listens on a 0600 Unix socket, except on
 # macOS, where the app's serve cannot reach one: 127.0.0.1 there. $RDIR/session (0600) keeps the URL and password so
@@ -1127,7 +1127,7 @@ _ours() {
   case $2 in
     watch) [[ $a == *" remote watch $3" ]] ;;
     serve) [[ $a == *" serve "*" --set-path /$3 "(http://127.0.0.1:<->/$3|unix:/*) ]] ;;
-    gw)    [[ $a == *lzr1-remote-gw" "*" --base /$3/ "* ]] ;;
+    gw)    [[ $a == *iroost-remote-gw" "*" --base /$3/ "* ]] ;;
     ttyd)  [[ $a == *ttyd" "*" -b /$3 "* ]] ;;
     *) return 1 ;;
   esac
@@ -1170,13 +1170,13 @@ _remote_published() {
   case $? in 0) return 0 ;; 1) return 1 ;; *) return 2 ;; esac
 }
 
-# _remote_browsers UUID [kill]: how many browsers' layouts (tmux sessions marked @lzr1_remote UUID) are open, into
+# _remote_browsers UUID [kill]: how many browsers' layouts (tmux sessions marked @iroost_remote UUID) are open, into
 # REPLY; with kill, ends them too
 _remote_browsers() {
   local s m; REPLY=0
-  tmux -L lzr1 list-sessions -F '#{session_name} #{@lzr1_remote}' 2>/dev/null | while read -r s m; do
+  tmux -L iroost list-sessions -F '#{session_name} #{@iroost_remote}' 2>/dev/null | while read -r s m; do
     [[ $m == $1 ]] || continue
-    (( REPLY++ )); [[ $2 == kill ]] && tmux -L lzr1 kill-session -t "=$s" 2>/dev/null
+    (( REPLY++ )); [[ $2 == kill ]] && tmux -L iroost kill-session -t "=$s" 2>/dev/null
   done
 }
 
@@ -1214,8 +1214,8 @@ _remote_off() {
   fi
   rm -f $RDIR/*.sock(N) $RDIR/*.last(N) $RDIR/gw.out $RDIR/gw.pid $RDIR/serve.out $RDIR/serve.pid
   if (( r != 1 )); then
-    print -ru2 -- "lzr1-panel: could not unpublish https://${RS[host]:-<this machine>}/$u/ (is Tailscale running?);" \
-      "everything else is stopped; kept $RDIR/session. Run lzr1-panel remote off again, or:" \
+    print -ru2 -- "iroost: could not unpublish https://${RS[host]:-<this machine>}/$u/ (is Tailscale running?);" \
+      "everything else is stopped; kept $RDIR/session. Run iroost remote off again, or:" \
       "tailscale serve --https=443 --set-path /$u off"
     return 1
   fi
@@ -1231,7 +1231,7 @@ _remote_lock() {
   (( RLOCK )) && return 0
   zmodload zsh/system; mkdir -p $RDIR && chmod 700 $RDIR; : >>$RDIR/lock  # flock opens, never creates
   zsystem flock -t 30 -f RLOCK $RDIR/lock ||
-    { RLOCK=0; die "another lzr1-panel remote command is still running after 30 s (or $RDIR/lock cannot be locked)" }
+    { RLOCK=0; die "another iroost remote command is still running after 30 s (or $RDIR/lock cannot be locked)" }
 }
 _remote_unlock() { (( RLOCK )) && zsystem flock -u $RLOCK; RLOCK=0 }
 
@@ -1264,7 +1264,7 @@ _remote_keeper() {
   _stop $(<$RDIR/serve.pid) serve $u
 }
 
-# _remote_watch UUID: the watcher, a process of its own (`lzr1-panel remote watch UUID`). Every second it turns the
+# _remote_watch UUID: the watcher, a process of its own (`iroost remote watch UUID`). Every second it turns the
 # gateway's new audit lines into alerts (_remote_alert); it turns everything off when the gateway ends (--ttl, the kill
 # switch, a crash) or serve does (Tailscale quit), or when Funnel is on for this address (checked every 10 s; a status
 # Tailscale cannot give counts as on), and says why. A remote off you type stops it first, so that is never alerted.
@@ -1278,7 +1278,7 @@ _remote_watch() {
     sleep 1
     _remote_audit $pos; pos=$REPLY; _remote_alert $reply
     if (( ++n % 10 == 0 )) && ! { _remote_funnel $RS[host]; (( $? == 1 )) }; then
-      print -r -- "lzr1-panel: Funnel is on for $RS[host]:443 (or Tailscale cannot say): turning remote off"
+      print -r -- "iroost: Funnel is on for $RS[host]:443 (or Tailscale cannot say): turning remote off"
       why=funnel; break
     fi
   done
@@ -1306,9 +1306,9 @@ _remote_audit() {
   reply=( ${(f)c} )
 }
 
-# _remote_note KIND TEXT: one remote alert (LZR1_REMOTE_NOTIFY=0: none; LZR1_NOTIFY does not silence these). A group
+# _remote_note KIND TEXT: one remote alert (IROOST_REMOTE_NOTIFY=0: none; IROOST_NOTIFY does not silence these). A group
 # per kind, so a later alert never replaces one of another kind (terminal-notifier keeps one per group).
-_remote_note() { [[ ${LZR1_REMOTE_NOTIFY:-1} == 0 ]] || _notify_one "lzr1 remote" "${RS[host]%%.*}" "$2" lzr1-remote-$1 }
+_remote_note() { [[ ${IROOST_REMOTE_NOTIFY:-1} == 0 ]] || _notify_one "iroost remote" "${RS[host]%%.*}" "$2" iroost-remote-$1 }
 
 # _remote_alert LINE...: the watcher's audit lines as alerts: a login, a lockout, the kill switch, the TTL; wrong
 # passwords as one "N wrong passwords (LOGIN, ...)" at most every 30 s (later ones wait for the next, or for the last
@@ -1358,7 +1358,7 @@ _dur() {
 
 # _remote_gw_state: the gateway's path in REPLY; 0 when it is built and newer than its source, 1 when stale or missing
 _remote_gw_state() {
-  local f; REPLY=$RDIR/lzr1-remote-gw
+  local f; REPLY=$RDIR/iroost-remote-gw
   [[ -x $REPLY ]] || return 1
   for f in ${SELF:h:h}/gateway/*.(go|mod|html|js)(N); do [[ $f -nt $REPLY ]] && return 1; done
   return 0
@@ -1410,7 +1410,7 @@ _remote_status() {
   print -r -- "  gateway:  pid $RS[gwpid], ${${RS[port]:+127.0.0.1:$RS[port]}:-$RDIR/gw.sock}"
   print -r -- "  serve:    pid $RS[servepid] (the path ends with it; it ends with the gateway)"
   if _ours "$RS[ttydpid]" ttyd $RS[uuid]; then print -r -- "  ttyd:     pid $RS[ttydpid], $n browser(s) connected"
-  else print -r -- "  ttyd:     stopped (lzr1-panel remote off, then on)"; fi
+  else print -r -- "  ttyd:     stopped (iroost remote off, then on)"; fi
 }
 
 # _remote_pw LENGTH: a new password into REPLY: 56 characters with no look-alikes (0/O, 1/l/I), about 5.8 bits each
@@ -1438,7 +1438,7 @@ _remote_start() {
   [[ $OSTYPE == darwin* ]] && listen=(--listen 127.0.0.1:0)
   zmodload zsh/system
   print -r -- $RS[password] | ( print $sysparams[pid] >$RDIR/gw.pid; trap '' HUP
-      exec $RDET $RDIR/lzr1-remote-gw $listen --host $RS[host] --upstream $RDIR/ttyd.sock --base /$u/ --allow $RS[allow] \
+      exec $RDET $RDIR/iroost-remote-gw $listen --host $RS[host] --upstream $RDIR/ttyd.sock --base /$u/ --allow $RS[allow] \
         --ttl $ttl --log $RDIR/remote.log --audit $RDIR/audit.log --idle $RS[idle] --state $STATE 2>>$RDIR/remote.log ) |
     _remote_keeper $u >>$RDIR/remote.log 2>&1 &!
   # gw.pid is written just before the exec, so until then its command line is still this shell's: only a pid that
@@ -1466,7 +1466,7 @@ _remote_start() {
   if ! _remote_published $u; then
     out=; [[ -r $RDIR/serve.out ]] && out=$(<$RDIR/serve.out)
     [[ $out == *(#i)(access denied|permission|operator)* ]] &&
-      print -ru2 -- "lzr1-panel: serve needs root on Linux, or once: sudo tailscale set --operator=\$USER"
+      print -ru2 -- "iroost: serve needs root on Linux, or once: sudo tailscale set --operator=\$USER"
     REPLY="tailscale serve failed: ${${out:-no route after 5 s}//$'\n'/ }"; return 1
   fi
   # Checked again now that it is published (Funnel could have been turned on meanwhile), and by the watcher.
@@ -1485,12 +1485,12 @@ _remote_start() {
 # Turns the remote off rather than leave it half on when the new gateway cannot start.
 _remote_rotate() {
   zmodload zsh/datetime
-  local u n=${LZR1_REMOTE_PWLEN:-16} left i
+  local u n=${IROOST_REMOTE_PWLEN:-16} left i
   _remote_lock
   _remote_live || die "remote is off"
   u=$RS[uuid] left=$(( ${RS[expires]:-0} - EPOCHSECONDS ))
-  (( left >= 60 )) || die "it expires in under a minute: lzr1-panel remote on after it ends"
-  [[ $n == <-> ]] && (( n >= 12 )) || die "LZR1_REMOTE_PWLEN must be 12 or more (got $n)"
+  (( left >= 60 )) || die "it expires in under a minute: iroost remote on after it ends"
+  [[ $n == <-> ]] && (( n >= 12 )) || die "IROOST_REMOTE_PWLEN must be 12 or more (got $n)"
   (( $+commands[openssl] )) || die "remote needs openssl"
   _remote_gw >/dev/null  # rebuilt now if its source changed: a failed build dies before anything stops
   # The watcher first, so it neither alerts nor turns everything off; then the gateway, and serve (the keeper ends it
@@ -1537,7 +1537,7 @@ _remote_who() {
 
 # ---- Spotify: the now-playing block above the footer (macOS, the desktop app, signed in) ---------------------------------
 # It shows only while Spotify runs and has a track (a signed-out or idle app has none), so there is nothing to turn on.
-# LZR1_SPOTIFY=off hides it. A poller (_spotpoll) renders it into $SPOT/foot every 2s; the footer reads that file.
+# IROOST_SPOTIFY=off hides it. A poller (_spotpoll) renders it into $SPOT/foot every 2s; the footer reads that file.
 
 SPOT=$STATE/spotify
 
@@ -1560,7 +1560,7 @@ with_timeout() {
 
 spot_query() {
   REPLY=
-  [[ $OSTYPE == darwin* && $LZR1_SPOTIFY != off ]] || return 1
+  [[ $OSTYPE == darwin* && $IROOST_SPOTIFY != off ]] || return 1
   pgrep -x Spotify >/dev/null 2>&1 || return 1
   with_timeout 3 osascript -e 'tell application "Spotify"
   set pst to (player state as text)
@@ -1645,6 +1645,20 @@ spot_render() {
 # A plain shell line, so a refresh's spinner redraws it without starting this script.
 foot_cmd() { print -rn -- "cat ${(q)SPOT}/foot 2>/dev/null; printf ' [≡ menu]  [%s] ' ${(q)1:-↻}"; }
 
+# _suggest: the few commands worth trying first (a bare `iroost`, or one that was mistyped).
+_suggest() {
+  print -r -- 'iroost: your personal stack, and the roost where your sessions nest.
+  iroost open                       open the app: sessions, pull requests and a viewer
+  iroost list                       print every session, then your open pull requests
+  iroost run                        Claude in a new tmux session in this folder
+  iroost start PROFILE opus NAME    start a session on a profile (opus|sonnet|agy|opencode|term)
+  iroost attach PROFILE NAME        this terminal into a session
+  iroost profile add                register a machine, guided
+  iroost remote on                  the app in a browser on your tailnet
+  iroost doctor                     check everything it needs, with the fix for what is missing
+  iroost help                       every command and setting'
+}
+
 # ---- commands -------------------------------------------------------------------------------------------------------
 
 case $1 in
@@ -1665,22 +1679,22 @@ start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode a
   local model=$3 name=$4 agent=claude REPLY
   shift 4 2>/dev/null
   [[ $model == (opus|sonnet|agy|opencode|term) && -n $name ]] ||
-    die 'usage: lzr1-panel start PROFILE opus|sonnet|agy|opencode|term NAME [claude, agy or opencode args]'
+    die 'usage: iroost start PROFILE opus|sonnet|agy|opencode|term NAME [claude, agy or opencode args]'
   [[ $name == *[.:/\|]* ]] && die 'session names cannot contain ".", ":", "/" or "|"'
-  # LZR1_PROMPT is the first message; a resumed conversation does not get it again, nor your args.
+  # IROOST_PROMPT is the first message; a resumed conversation does not get it again, nor your args.
   if [[ $model == term ]]; then
     agent=term REPLY=  # no command: tmux starts the machine's own shell
   elif [[ $model == opencode ]]; then
     agent=opencode
     local oc="${(q)P_OPENCODE} --auto" args=${(j: :)${(q)@}}
-    _keep opencode "$oc${args:+ $args}${LZR1_PROMPT:+ --prompt ${(q)LZR1_PROMPT}}" "$oc --continue"
+    _keep opencode "$oc${args:+ $args}${IROOST_PROMPT:+ --prompt ${(q)IROOST_PROMPT}}" "$oc --continue"
   elif [[ $model == agy ]]; then
     agent=agy
     local ag="${(q)P_AGY} --dangerously-skip-permissions" args=${(j: :)${(q)@}}
-    _keep agy "$ag${args:+ $args}${LZR1_PROMPT:+ --prompt-interactive ${(q)LZR1_PROMPT}}" "$ag --continue"
+    _keep agy "$ag${args:+ $args}${IROOST_PROMPT:+ --prompt-interactive ${(q)IROOST_PROMPT}}" "$ag --continue"
   else
     local claude="${(q)P_CLAUDE} --model $model --dangerously-skip-permissions --effort medium --remote-control ${(q)name} ${(j: :)${(q)@}}"
-    _keep Claude "$claude ${LZR1_PROMPT:+${(q)LZR1_PROMPT}}" "$claude --continue"
+    _keep Claude "$claude ${IROOST_PROMPT:+${(q)IROOST_PROMPT}}" "$claude --continue"
   fi
   local cmd=$REPLY
   print -r -- "starting: $name on $P_NAME"
@@ -1701,17 +1715,17 @@ start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode a
     if [ -n "$cmd" ]; then tmux new-session -d -s "$name" -c "$dir" -x 200 -y 50 "$cmd" || exit 1
     else tmux new-session -d -s "$name" -c "$dir" -x 200 -y 50 || exit 1; fi
     tmux set-option -t "=$name:" window-size smallest 2>/dev/null || :
-    tmux set-option -t "=$name:" @lzr1_model "$5"
-    if [ "$6" = term ]; then tmux set-option -t "=$name:" @lzr1_agent term; echo started; exit 0; fi
+    tmux set-option -t "=$name:" @iroost_model "$5"
+    if [ "$6" = term ]; then tmux set-option -t "=$name:" @iroost_agent term; echo started; exit 0; fi
     # opencode asks no folder trust and has no Remote Control link: started once it outlives its first 2s.
     if [ "$6" = opencode ]; then
-      tmux set-option -t "=$name:" @lzr1_agent opencode; sleep 2
+      tmux set-option -t "=$name:" @iroost_agent opencode; sleep 2
       if ! tmux has-session -t "=$name" 2>/dev/null || tmux capture-pane -p -J -t "=$name:" | grep -q "opencode exited"
       then echo "opencode exited right after start"; exit 1; fi
       echo started; exit 0
     fi
     if [ "$6" = agy ]; then
-      tmux set-option -t "=$name:" @lzr1_agent agy
+      tmux set-option -t "=$name:" @iroost_agent agy
       trusted= i=0
       while [ $i -lt 15 ]; do
         i=$((i + 1)); sleep 1
@@ -1738,13 +1752,13 @@ start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode a
       url=$(printf "%s" "$screen" | grep -o "https://claude.ai/code/session_[A-Za-z0-9]*" | tail -1)
       if [ -n "$url" ]; then tmux set-option -t "=$name:" @rc_url "$url"; echo "remote control: $url"; exit 0; fi
     done
-    echo "started (Remote Control link not shown yet)"' "$name" "$cmd" "${P_ROOT:-${P_REPOS:-~}}" "$P_REPOS" "$model" $agent "$LZR1_DIR"
+    echo "started (Remote Control link not shown yet)"' "$name" "$cmd" "${P_ROOT:-${P_REPOS:-~}}" "$P_REPOS" "$model" $agent "$IROOST_DIR"
   ;;
 
 prs)  # your open pull requests, fresh
   prs_stale; prs_refresh
   local it; for it in "${(@0)$(pr_rows ${COLUMNS:-80})}"; do [[ -n $it ]] && print -r -- ${it#*$'\t'}; done
-  [[ -s $STATE/prs ]] || print -ru2 -- "lzr1-panel: no GitHub account found (sign in with: gh auth login)"
+  [[ -s $STATE/prs ]] || print -ru2 -- "iroost: no GitHub account found (sign in with: gh auth login)"
   ;;
 
 doctor)  # checks this computer, GitHub and every profile, with the fix for anything missing
@@ -1768,13 +1782,13 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
   v=${commands[opencode]:-$HOME/.opencode/bin/opencode}
   if [[ -x $v ]]; then v=${"$($v --version 2>/dev/null)"##* }; _ok "opencode${v:+ ${v#v}}"
   else print "  · no opencode: opencode sessions unavailable"; _hint "brew install sst/tap/opencode, or see opencode.ai"; fi
-  if [[ $PK_MODE == off ]]; then print "  · Pokémon off (LZR1_POKEMON=off, or off in the panel's [≡ menu])"
+  if [[ $PK_MODE == off ]]; then print "  · Pokémon off (IROOST_POKEMON=off, or off in the panel's [≡ menu])"
   elif (( $+commands[curl] && ( $+commands[magick] || $+commands[convert] ) )); then
     _ok "Pokémon ($PK_MODE): sprites can be cut (curl and ImageMagick)"
-    if [[ ${LZR1_POKEMON_IMAGES:-auto} != 0 && -z $TMUX && ( $TERM_PROGRAM == ghostty || -n $GHOSTTY_RESOURCES_DIR || -n $KITTY_WINDOW_ID ) ]]
+    if [[ ${IROOST_POKEMON_IMAGES:-auto} != 0 && -z $TMUX && ( $TERM_PROGRAM == ghostty || -n $GHOSTTY_RESOURCES_DIR || -n $KITTY_WINDOW_ID ) ]]
     then _ok "Pokémon pictures: this terminal shows real images (Kitty graphics)"
-    elif [[ ${LZR1_POKEMON_IMAGES:-auto} == (0|halfblocks) ]]
-    then print "  · Pokémon pictures: half blocks here (LZR1_POKEMON_IMAGES=$LZR1_POKEMON_IMAGES)"
+    elif [[ ${IROOST_POKEMON_IMAGES:-auto} == (0|halfblocks) ]]
+    then print "  · Pokémon pictures: half blocks here (IROOST_POKEMON_IMAGES=$IROOST_POKEMON_IMAGES)"
     else print "  · Pokémon pictures: text tags here (real images in Ghostty or kitty, outside tmux)"; fi
   else
     print "  · Pokémon ($PK_MODE): no ImageMagick (magick), so no sprites; the panel shows text tags"
@@ -1789,7 +1803,7 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
     else print "  · no Ghostty: the panel opens as a tmux layout"; fi
   fi
   print "\ngithub (the pull requests under your sessions)"
-  if [[ ${LZR1_PRS:-1} == 0 ]]; then print "  · hidden (LZR1_PRS=0)"
+  if [[ ${IROOST_PRS:-1} == 0 ]]; then print "  · hidden (IROOST_PRS=0)"
   elif (( $+commands[gh] )) && login=$(gh api user -q .login 2>/dev/null); then _ok "gh is signed in as $login"
   elif (( $+commands[gh] )) && [[ -n $GITHUB_TOKEN$GH_TOKEN ]] &&
        login=$(GITHUB_TOKEN= GH_TOKEN= gh api user -q .login 2>/dev/null); then
@@ -1806,21 +1820,21 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
   fi
   # Informational only: a computer without a notifier still runs the panel.
   print "\nalerts (a tone and a notification when a session needs you)"
-  [[ ${LZR1_SOUND:-1} == 0 ]] && print "  · tone off (LZR1_SOUND=0)"
-  [[ ${LZR1_NOTIFY:-1} == 0 ]] && print "  · notifications off (LZR1_NOTIFY=0)"
+  [[ ${IROOST_SOUND:-1} == 0 ]] && print "  · tone off (IROOST_SOUND=0)"
+  [[ ${IROOST_NOTIFY:-1} == 0 ]] && print "  · notifications off (IROOST_NOTIFY=0)"
   _tone
   if [[ $reply[1] == bell ]]; then print "  · tone: terminal bell (no default sound for paplay, no canberra-gtk-play)"
   elif (( $#reply )); then _ok "tone: $reply[1]"
-  elif [[ ${LZR1_SOUND:-1} != (0|1) && ! -r $LZR1_SOUND ]]; then print -r -- "  · tone: cannot read $LZR1_SOUND"
-  elif [[ ${LZR1_SOUND:-1} == 1 ]]; then print "  · no tone: the default sound is missing"
-  elif [[ $LZR1_SOUND != 0 ]]; then print -r -- "  · no tone: no paplay or canberra-gtk-play for $LZR1_SOUND"; fi
+  elif [[ ${IROOST_SOUND:-1} != (0|1) && ! -r $IROOST_SOUND ]]; then print -r -- "  · tone: cannot read $IROOST_SOUND"
+  elif [[ ${IROOST_SOUND:-1} == 1 ]]; then print "  · no tone: the default sound is missing"
+  elif [[ $IROOST_SOUND != 0 ]]; then print -r -- "  · no tone: no paplay or canberra-gtk-play for $IROOST_SOUND"; fi
   if [[ $OSTYPE == darwin* ]]; then
-    if [[ ${LZR1_NOTIFY:-1} != 0 ]]; then
+    if [[ ${IROOST_NOTIFY:-1} != 0 ]]; then
       if (( $+commands[terminal-notifier] )); then _ok "notifications: terminal-notifier"
       else print "  · notifications: osascript"; _hint "brew install terminal-notifier (groups them per session)"; fi
     fi
   else
-    if [[ ${LZR1_NOTIFY:-1} != 0 ]]; then
+    if [[ ${IROOST_NOTIFY:-1} != 0 ]]; then
       if (( ! $+commands[notify-send] )); then
         print "  · no notify-send"; _hint "install libnotify (libnotify-bin on Debian/Ubuntu)"
       elif [[ -z $DISPLAY$WAYLAND_DISPLAY ]]; then
@@ -1828,13 +1842,13 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
       else _ok "notifications: notify-send"; fi
     fi
   fi
-  _hint "lzr1-panel notify sends a test"
+  _hint "iroost notify sends a test"
   # Informational (·) until the remote is set up here (remote.conf, the gateway built, or a session file): then a piece
   # remote on cannot work without is ✗. Funnel on is ✗ always. Read-only: it starts, stops and cleans nothing.
   print "\nremote (the panel in a browser: docs/remote.md)"
   local setup= j st= certs=0 host= rv
   local -a f
-  [[ -e $CONFIG/remote.conf || -e $RDIR/lzr1-remote-gw || -e $RDIR/session ]] && setup=1
+  [[ -e $CONFIG/remote.conf || -e $RDIR/iroost-remote-gw || -e $RDIR/session ]] && setup=1
   _rno() { if [[ -n $setup ]]; then _no $1; else print -r -- "  · $1"; fi; _hint $2 }
   if [[ ! -x $TSBIN ]]; then _rno "no Tailscale" "tailscale.com/download"
   else
@@ -1876,14 +1890,14 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
     else _rno "$USER is not Tailscale's operator: tailscale serve needs root" "sudo tailscale set --operator=\$USER"; fi
   fi
   # The settings remote on checks (the pattern of _dur, which would die here).
-  for v in LZR1_REMOTE_TTL LZR1_REMOTE_IDLE; do
+  for v in IROOST_REMOTE_TTL IROOST_REMOTE_IDLE; do
     rv=${(P)v}; [[ -z $rv ]] && continue
     [[ $rv == ([0-9]##[hms])## && $rv == *[1-9]* ]] ||
       _rno "$v=$rv: remote on refuses it" "hours, minutes or seconds, like 8h, 90m or 1h30m"
   done
-  rv=${LZR1_REMOTE_PWLEN:-16}
-  [[ $rv == <-> ]] && (( rv >= 12 )) || _rno "LZR1_REMOTE_PWLEN=$rv: remote on refuses it" "12 or more"
-  print -r -- "  · expires after ${LZR1_REMOTE_TTL:-8h}, idle logout after ${LZR1_REMOTE_IDLE:-30m}, ${LZR1_REMOTE_PWLEN:-16}-character password"
+  rv=${IROOST_REMOTE_PWLEN:-16}
+  [[ $rv == <-> ]] && (( rv >= 12 )) || _rno "IROOST_REMOTE_PWLEN=$rv: remote on refuses it" "12 or more"
+  print -r -- "  · expires after ${IROOST_REMOTE_TTL:-8h}, idle logout after ${IROOST_REMOTE_IDLE:-30m}, ${IROOST_REMOTE_PWLEN:-16}-character password"
   # The state, from the session file only: never the password.
   if [[ ! -e $RDIR/session ]]; then print "  · off"
   elif _remote_read && _ours "$RS[gwpid]" gw $RS[uuid]; then
@@ -1891,10 +1905,10 @@ doctor)  # checks this computer, GitHub and every profile, with the fix for anyt
     _remote_audit ${RS[auditpos]:-0}; f=( ${(M)reply:#[^ ]# login *} )
     _ok "on: $RS[url] (until $(strftime '%H:%M' ${RS[expires]:-0}), for ${RS[allow]//,/, }; $#f login(s))"
   else
-    _no "a path may still be published: ${RS[url]:-the session in $RDIR/session}"; _hint "lzr1-panel remote off"
+    _no "a path may still be published: ${RS[url]:-the session in $RDIR/session}"; _hint "iroost remote off"
   fi
   print "\nprofiles"
-  (( $#all )) || { _no "no profiles yet"; _hint "lzr1-panel profile add" }
+  (( $#all )) || { _no "no profiles yet"; _hint "iroost profile add" }
   for p in $all; do profile_test $p | sed 's/^/  /' || bad=1; done
   if (( bad )); then print "\n  something needs fixing: see docs/troubleshooting.md"; else print "\n  all good"; fi
   exit $bad
@@ -1959,9 +1973,9 @@ run)  # run [--model ID] [--effort E] [--agy] [--opencode] [--name NAME] [args]:
   env -u TMUX tmux new-session -d -s "$name" -c "$PWD" -x ${COLUMNS:-200} -y ${LINES:-50} "$REPLY" || die "cannot start tmux"
   env -u TMUX tmux set-option -t "=$name:" window-size smallest 2>/dev/null
   case $model in *opus*) fam=opus ;; *sonnet*) fam=sonnet ;; *haiku*) fam=haiku ;; *fable*) fam=fable ;; *) fam=$model ;; esac
-  [[ -n $oc ]] && fam=opencode && env -u TMUX tmux set-option -t "=$name:" @lzr1_agent opencode
-  [[ -n $ag ]] && fam=agy && env -u TMUX tmux set-option -t "=$name:" @lzr1_agent agy
-  [[ -n $fam ]] && env -u TMUX tmux set-option -t "=$name:" @lzr1_model $fam
+  [[ -n $oc ]] && fam=opencode && env -u TMUX tmux set-option -t "=$name:" @iroost_agent opencode
+  [[ -n $ag ]] && fam=agy && env -u TMUX tmux set-option -t "=$name:" @iroost_agent agy
+  [[ -n $fam ]] && env -u TMUX tmux set-option -t "=$name:" @iroost_model $fam
   env -u TMUX sh -c "$CLIP"
   # Already inside this machine's own tmux: switch to the session; anywhere else, attach to it.
   sock=$(env -u TMUX tmux display -p -t "=$name:" '#{socket_path}' 2>/dev/null)
@@ -1970,7 +1984,7 @@ run)  # run [--model ID] [--effort E] [--agy] [--opencode] [--name NAME] [args]:
   ;;
 
 attach)  # attach PROFILE NAME: this terminal into a session (Ctrl-b d leaves it)
-  [[ -n $3 ]] || die 'usage: lzr1-panel attach PROFILE NAME'
+  [[ -n $3 ]] || die 'usage: iroost attach PROFILE NAME'
   exec $SELF _attach "$2/$3"
   ;;
 
@@ -1988,7 +2002,7 @@ profile)
     list|ls|'')
       local p; local -a all=( $(profiles) )
       for p in $all; do load $p && print -r -- "$p  $P_TYPE${P_HOST:+  $P_HOST}  repos=$P_REPOS${P_ONLY:+  only=$P_ONLY}"; done
-      (( $#all )) || print "no profiles yet: lzr1-panel profile add"
+      (( $#all )) || print "no profiles yet: iroost profile add"
       ;;
     show) load $2 && { print -r -- "# $PROFILES/$2.conf"; grep -v '^#' $PROFILES/$2.conf } ;;
     add) shift; profile_add "$@" ;;
@@ -2003,7 +2017,7 @@ open)  # panel on the left, viewer on the right
   local id=$$ term
   # A reused ID is a new panel: its first refresh only records, it starts wide, and it is not a browser's layout.
   rm -rf $STATE/^remote(Nmd+1) $STATE/$id.seeded $STATE/$id.narrow $STATE/$id.fit $STATE/$id.remote $STATE/kitty/$id.*
-  lzr1_splash open
+  iroost_splash open
   if [[ $OSTYPE == darwin* && ( $TERM_PROGRAM == ghostty || -n $GHOSTTY_RESOURCES_DIR ) && -z $TMUX ]]; then
     # Ghostty: split this pane; it becomes the viewer.
     term=$(ghostty 'get id of focused terminal of selected tab of front window') || die "cannot script Ghostty"
@@ -2019,20 +2033,20 @@ open)  # panel on the left, viewer on the right
   # Anywhere else: a tmux layout on its own server, with no prefix key, so every key reaches the panel,
   # the viewer or Claude; the mouse picks a pane.
   command -v tmux >/dev/null || die "needs tmux"
-  local -a T=(tmux -L lzr1 -f /dev/null)
-  local sess=lzr1-$id vpane clip=
+  local -a T=(tmux -L iroost -f /dev/null)
+  local sess=iroost-$id vpane clip=
   # Copies made inside (Claude Code's own, or a session's tmux on any machine) arrive here as OSC 52: put them on
   # this computer's clipboard ourselves, since not every terminal does. This layout's own hook, not the server's: a
   # browser's layout (remote) on the same server sends them on to the browser's clipboard (gateway/client.js) only.
   if (( $+commands[pbcopy] )); then clip=pbcopy
   elif [[ -n $WAYLAND_DISPLAY ]] && (( $+commands[wl-copy] )); then clip=wl-copy
   elif [[ -n $DISPLAY ]] && (( $+commands[xclip] )); then clip='xclip -selection clipboard'; fi
-  # The lzr1 server exits with its last layout. A layout starting while it does (a browser reconnecting as its old
+  # The iroost server exits with its last layout. A layout starting while it does (a browser reconnecting as its old
   # layout ends) is refused ("server exited unexpectedly"), or its session goes with the server: try again.
   # Any unattached layout left behind by an older version is cleaned up first so its viewer stops holding sessions open.
   $SELF _reap
   local s; for s in $($T list-sessions -F '#{?session_attached,,#{session_name}}' 2>/dev/null); do
-    [[ $s == lzr1-<-> ]] && $T kill-session -t "=$s" 2>/dev/null
+    [[ $s == iroost-<-> ]] && $T kill-session -t "=$s" 2>/dev/null
   done
   local n r err
   for r in 1 2 3; do
@@ -2055,9 +2069,9 @@ open)  # panel on the left, viewer on the right
     $T has-session -t "=$sess" 2>/dev/null && break
     (( r < 3 )) || die "cannot start tmux"
   done
-  [[ -n $clip && -z $LZR1_REMOTE ]] && $T set-hook -t $sess pane-set-clipboard "run-shell -b 'tmux save-buffer - | $clip'"
+  [[ -n $clip && -z $IROOST_REMOTE ]] && $T set-hook -t $sess pane-set-clipboard "run-shell -b 'tmux save-buffer - | $clip'"
   # A browser's layout: _select keeps its pick in the remote's .last, so a reconnecting browser comes back to it.
-  [[ -n $LZR1_REMOTE ]] && print -rn -- $LZR1_REMOTE >$STATE/$id.remote
+  [[ -n $IROOST_REMOTE ]] && print -rn -- $IROOST_REMOTE >$STATE/$id.remote
   vpane=$($T display -p -t $sess '#{pane_id}')
   print -rn -- tmux >$STATE/$id.mode
   print -rn -- $TERM_PROGRAM >$STATE/$id.term
@@ -2066,7 +2080,7 @@ open)  # panel on the left, viewer on the right
   # Narrow (a phone in a browser, a small terminal): one pane at a time, the panel first (_fit, on every attach and
   # resize, so a phone turned sideways follows). A tap on the status line it shows over a session brings the panel back
   # (_back), also after `full` in a wide layout.
-  local envs="LZR1_CONFIG=${(q)CONFIG} XDG_CACHE_HOME=${(q)STATE:h} LZR1_PANEL_WIDTH=$PANEL_W LZR1_NARROW=$NARROW"
+  local envs="IROOST_CONFIG=${(q)CONFIG} XDG_CACHE_HOME=${(q)STATE:h} IROOST_PANEL_WIDTH=$PANEL_W IROOST_NARROW=$NARROW"
   (( NARROW )) && $T set-hook -t $sess client-attached "run-shell -b '$envs $SELF _fit $id'" \
      \; set-hook -t $sess client-resized "run-shell -b '$envs $SELF _fit $id'" >/dev/null 2>&1
   $T bind -n MouseDown1Status "run-shell '$envs $SELF _back #{session_name}'" \
@@ -2074,8 +2088,8 @@ open)  # panel on the left, viewer on the right
      \; bind -n MouseDown1StatusRight "run-shell '$envs $SELF _back #{session_name}'" \
      \; bind -n MouseDown1StatusDefault "run-shell '$envs $SELF _back #{session_name}'" >/dev/null 2>&1
   # Closing the terminal window or browser tab ends this layout and detaches its viewer from any session.
-  [[ -n $LZR1_REMOTE ]] &&
-    TMUX= exec $T attach -t $sess \; set -t $sess destroy-unattached on \; set -t $sess @lzr1_remote $LZR1_REMOTE
+  [[ -n $IROOST_REMOTE ]] &&
+    TMUX= exec $T attach -t $sess \; set -t $sess destroy-unattached on \; set -t $sess @iroost_remote $IROOST_REMOTE
   TMUX= exec $T attach -t $sess \; set -t $sess destroy-unattached on
   ;;
 
@@ -2085,7 +2099,7 @@ _viewer)  # _viewer ID: attaches to whatever the panel picked, waits when nothin
   local tfile=$STATE/$id.target
   trap 'rm -f $tfile $tfile.want $tfile.detached $tfile.on $STATE/$id.vpid' EXIT
   print -rn -- $$ >$STATE/$id.vpid; rmdir $STATE/$id.spawn 2>/dev/null
-  printf '\e]2;lzr1 viewer\a'
+  printf '\e]2;iroost viewer\a'
   while true; do
     target=$(<$tfile 2>/dev/null)
     if [[ -z $target ]]; then
@@ -2115,7 +2129,7 @@ _viewer)  # _viewer ID: attaches to whatever the panel picked, waits when nothin
       print -rn -- $target >$tfile.on
       on -t '
         tmux has-session -t "=$2" 2>/dev/null || exit 3
-        mkdir -p "$HOME/.cache/lzr1-panel-viewer" && tty >"$HOME/.cache/lzr1-panel-viewer/$1"
+        mkdir -p "$HOME/.cache/iroost-viewer" && tty >"$HOME/.cache/iroost-viewer/$1"
         '"$CLIP"'
         unset TMUX
         exec tmux attach -t "=$2"' $id $KS || true
@@ -2170,7 +2184,7 @@ _select)  # _select ID KEY [force]: point the viewer at KEY (debounced, so arrow
   if [[ ${was%%/*} == $KP ]]; then
     # Same machine: switch the attached client in place; .on tells the viewer its client is on KEY now.
     load $KP && [[ $(on '
-      c=$(cat "$HOME/.cache/lzr1-panel-viewer/$1" 2>/dev/null)
+      c=$(cat "$HOME/.cache/iroost-viewer/$1" 2>/dev/null)
       tmux set-option -t "=$2:" window-size smallest 2>/dev/null || :
       [ -n "$c" ] && tmux list-clients -F "#{client_tty}" | grep -qx "$c" && tmux switch-client -c "$c" -t "=$2" &&
         tmux refresh-client -c "$c" 2>/dev/null && echo switched
@@ -2243,7 +2257,7 @@ _prpos)  # _prpos ID: fzf's action that moves the highlight to the pull requests
 _theme)  # _theme: the [...] footer menu: the Pokémon theme on (sprites or text tags) or off, kept in $CONFIG/pokemon
   local cur=$PK_MODE pick m D=$'\e[90m' G=$'\e[32m' R=$'\e[0m' hdr=" Pokémon theme"
   local -a acts
-  [[ -n $LZR1_POKEMON ]] && hdr+=" ${D}(LZR1_POKEMON=$LZR1_POKEMON in your shell wins over this)$R"
+  [[ -n $IROOST_POKEMON ]] && hdr+=" ${D}(IROOST_POKEMON=$IROOST_POKEMON in your shell wins over this)$R"
   local k lbl mark
   for m in "sprite"$'\t'"on, with sprites" "text"$'\t'"on, text tags only" "off"$'\t'"off"; do
     k=${m%%$'\t'*} lbl=${m#*$'\t'} mark="  "
@@ -2298,8 +2312,8 @@ _new)  # _new opus|sonnet|opencode ID KEY [NAME [PROMPT]]: type a name on KEY's 
   # Only the machines that answered on the last refresh.
   local -a all=( ${${(M)${(@0)"$(<$STATE/$id.cache)"}:#[^+/]##/$'\t'*}%%/*} )
   (( $#all )) || all=( $(profiles) )
-  # LZR1_PICKED: a row's own menu started this, so its profile is the machine; no second question.
-  local given=; [[ -n $LZR1_PICKED && -n $p && -e $PROFILES/$p.conf ]] && given=1
+  # IROOST_PICKED: a row's own menu started this, so its profile is the machine; no second question.
+  local given=; [[ -n $IROOST_PICKED && -n $p && -e $PROFILES/$p.conf ]] && given=1
   [[ -n $p && -e $PROFILES/$p.conf ]] || p=${all[1]}
   if (( $#all > 1 )) && [[ -z $given ]]; then
     # Several machines: confirm which one, starting from the highlighted row's.
@@ -2308,7 +2322,7 @@ _new)  # _new opus|sonnet|opencode ID KEY [NAME [PROMPT]]: type a name on KEY's 
           --header='click a machine · esc cancels' --header-border=bottom \
           --bind 'left-click:accept,double-click:accept') || exit 0
   fi
-  [[ -n $p ]] || { print "no profiles yet: lzr1-panel profile add — press a key"; read -k1 -s; exit 0 }
+  [[ -n $p ]] || { print "no profiles yet: iroost profile add — press a key"; read -k1 -s; exit 0 }
   load $p || { read -k1 -s; exit 0 }
   # Type a name and press enter, or click a repository. Enter with nothing typed takes the highlighted one.
   local -a picked
@@ -2326,7 +2340,7 @@ _new)  # _new opus|sonnet|opencode ID KEY [NAME [PROMPT]]: type a name on KEY's 
   fi
   # A name already running (a second agent in the same folder) becomes NAME-2, NAME-3...; start opens them in NAME's folder.
   name=${$(on 'n=$1 i=1; while tmux has-session -t "=$n" 2>/dev/null; do i=$((i + 1)); n=$1-$i; done; printf %s "$n"' $name):-$name}
-  LZR1_PROMPT=$prompt $SELF start $p $model $name >$STATE/$id.startlog 2>&1 &!
+  IROOST_PROMPT=$prompt $SELF start $p $model $name >$STATE/$id.startlog 2>&1 &!
   # Back to the list as soon as tmux has the session; the viewer shows Claude starting in it.
   if ! on 'i=0; while [ $i -lt 100 ]; do tmux has-session -t "=$1" 2>/dev/null && exit 0; i=$((i + 1)); sleep 0.1; done; exit 1' $name; then
     print -r -- "could not start $name:"; cat $STATE/$id.startlog; print "press a key"; read -k1 -s; exit 0
@@ -2344,7 +2358,7 @@ _newhere)  # _newhere opus|sonnet|agy|opencode|term ID PROFILE DIR: a new sessio
   load $p || { read -k1 -s; exit 0 }
   name=${${dir:t}//[.:\/|]/-}; [[ -n $name ]] || name=session
   name=${$(on 'n=$1 i=1; while tmux has-session -t "=$n" 2>/dev/null; do i=$((i + 1)); n=$1-$i; done; printf %s "$n"' $name):-$name}
-  LZR1_DIR=$dir $SELF start $p $model $name >$STATE/$id.startlog 2>&1 &!
+  IROOST_DIR=$dir $SELF start $p $model $name >$STATE/$id.startlog 2>&1 &!
   if ! on 'i=0; while [ $i -lt 100 ]; do tmux has-session -t "=$1" 2>/dev/null && exit 0; i=$((i + 1)); sleep 0.1; done; exit 1' $name; then
     print -r -- "could not start $name:"; cat $STATE/$id.startlog; print "press a key"; read -k1 -s; exit 0
   fi
@@ -2359,7 +2373,7 @@ _respawn)  # _respawn ID: open a new viewer pane to the right of the panel
   rmdir $STATE/$id.spawn(Nms+10) 2>/dev/null
   mkdir $STATE/$id.spawn 2>/dev/null || exit 0
   if [[ $(mode $id) == tmux ]]; then
-    tmux -L lzr1 split-window -h -t $me -P -F '#{pane_id}' "$SELF _viewer $id" >$STATE/$id.vterm.new
+    tmux -L iroost split-window -h -t $me -P -F '#{pane_id}' "$SELF _viewer $id" >$STATE/$id.vterm.new
   else
     ghostty "set cfg to new surface configuration
       set command of cfg to \"$SELF _viewer $id\"
@@ -2371,7 +2385,7 @@ _respawn)  # _respawn ID: open a new viewer pane to the right of the panel
 
 _unclick)  # _unclick ID PANE: after a row's menu in the tmux layout (see _panel): a button release typed into the
            # panel, then the menu's reload, sent once fzf has read that release (it drops input while it reloads)
-  tmux -L lzr1 send-keys -t $3 -l $'\e[<0;1;1m' 2>/dev/null
+  tmux -L iroost send-keys -t $3 -l $'\e[<0;1;1m' 2>/dev/null
   { sleep 0.2
     curl -s -m 5 -H "x-api-key: $FZF_API_KEY" -XPOST "localhost:$FZF_PORT" -d "reload-sync($SELF _list $2)"
   } >/dev/null 2>&1 &!
@@ -2381,14 +2395,14 @@ _focus)  # _focus ID: move the keyboard to the viewer (narrow: the viewer alone)
   local vt=$(<$STATE/$2.vterm 2>/dev/null)
   [[ -z $vt ]] && exit 0
   if [[ $(mode $2) == tmux ]]; then
-    if [[ -e $STATE/$2.narrow ]]; then zoom_pane $vt; else tmux -L lzr1 select-pane -t $vt; fi
+    if [[ -e $STATE/$2.narrow ]]; then zoom_pane $vt; else tmux -L iroost select-pane -t $vt; fi
   else ghostty "focus (terminal id \"$vt\")" >/dev/null; fi
   ;;
 
 _fit)  # _fit ID: the tmux layout's hooks (open): under NARROW columns the panel or the viewer alone, with a status line
        # to come back to the panel; wide, the panel PANEL_W columns beside the viewer
-  local id=$2 s=lzr1-$2 me w z
-  local -a T=(tmux -L lzr1)
+  local id=$2 s=iroost-$2 me w z
+  local -a T=(tmux -L iroost)
   [[ -r $STATE/$id.me ]] && me=$(<$STATE/$id.me)
   [[ -n $me ]] || exit 0
   # One at a time (an attach and a resize come together), each reading the width when its turn comes: the last wins.
@@ -2402,15 +2416,15 @@ _fit)  # _fit ID: the tmux layout's hooks (open): under NARROW columns the panel
     status_sync $s
     # A browser's layout (a phone): the title says whether the list or a session shows (remote_view), for its header.
     # The last field, id=N, is this panel's: the strip's clicks name it (gateway/pokemon.go).
-    [[ -r $STATE/$id.remote ]] && $T set -t $s @lzr1_me $me \; set -t $s set-titles on \
-      \; set -t $s set-titles-string "lzr1|#{?#{==:#{pane_id},#{@lzr1_me}},list,view|#{@lzr1_view}}|id=$id" 2>/dev/null
+    [[ -r $STATE/$id.remote ]] && $T set -t $s @iroost_me $me \; set -t $s set-titles on \
+      \; set -t $s set-titles-string "iroost|#{?#{==:#{pane_id},#{@iroost_me}},list,view|#{@iroost_view}}|id=$id" 2>/dev/null
   else
     [[ -e $STATE/$id.narrow ]] || (( ! z )) || exit 0  # never unzoom what this did not zoom
     rm -f $STATE/$id.narrow
-    # A browser's wide layout: lzr1|wide|KEY|STATE|id=N, for the strip (the page's own title stays as it was).
+    # A browser's wide layout: iroost|wide|KEY|STATE|id=N, for the strip (the page's own title stays as it was).
     if [[ -r $STATE/$id.remote ]]; then
-      $T set -t $s @lzr1_me $me \; set -t $s set-titles on \
-        \; set -t $s set-titles-string "lzr1|wide|#{@lzr1_view}|id=$id" 2>/dev/null
+      $T set -t $s @iroost_me $me \; set -t $s set-titles on \
+        \; set -t $s set-titles-string "iroost|wide|#{@iroost_view}|id=$id" 2>/dev/null
     else $T set -t $s set-titles off 2>/dev/null; fi
     (( z )) && $T resize-pane -Z -t $me 2>/dev/null
     $T set -t $s status off \; resize-pane -t $me -x $PANEL_W 2>/dev/null
@@ -2418,8 +2432,8 @@ _fit)  # _fit ID: the tmux layout's hooks (open): under NARROW columns the panel
   ;;
 
 _back)  # _back SESSION: a tap on a narrow layout's status line: the panel alone again
-  local id=${2#lzr1-}
-  [[ $2 == lzr1-<-> ]] && to_panel $id
+  local id=${2#iroost-}
+  [[ $2 == iroost-<-> ]] && to_panel $id
   ;;
 
 _full)  # _full ID: the viewer alone, so a terminal app's own selection (Termius on a phone) cannot run across the panel
@@ -2672,7 +2686,7 @@ _fmenu)  # _fmenu ID KEY: the footer [≡ menu] list, replacing individual foote
   )
   pick=$(print -rl -- $acts | fzf --ansi --layout=reverse --no-input --no-sort --delimiter=$'\t' --with-nth=2 \
     --info=hidden --gutter=' ' --pointer='▌' --highlight-line --color='header:bold,pointer:yellow,current-fg:bold' \
-    --header=' lzr1 menu' --header-border=bottom \
+    --header=' iroost menu' --header-border=bottom \
     --bind 'left-click:accept,double-click:accept,right-click:abort,q:abort,esc:abort') || exit 0
   act=${pick%%$'\t'*}
   case $act in
@@ -2689,7 +2703,7 @@ _fmenu)  # _fmenu ID KEY: the footer [≡ menu] list, replacing individual foote
   ;;
 
 _spotpoll)  # _spotpoll ID PORT PANELPID: keep the Spotify block in the footer current while the panel (PANELPID) lives
-  [[ $OSTYPE == darwin* && $LZR1_SPOTIFY != off ]] || exit 0
+  [[ $OSTYPE == darwin* && $IROOST_SPOTIFY != off ]] || exit 0
   ( local prev cur
     while kill -0 $4 2>/dev/null && [[ ! -e $STATE/$2.quit ]]; do
       spot_render
@@ -2721,8 +2735,8 @@ _keylock)  # _keylock: toggle the keyboard lock (locked: only the mouse works; t
   ;;
 
 _keysync)  # _keysync: fzf actions (a transform) that make the panel's keys match the lock flag
-  if [[ -e $STATE/keylock ]]; then print -r -- "unbind($KEYLOCK_KEYS)+change-header-label( lzr1 · 🔒 keys locked )"
-  else print -r -- "rebind($KEYLOCK_KEYS)+change-header-label( lzr1 )"; fi
+  if [[ -e $STATE/keylock ]]; then print -r -- "unbind($KEYLOCK_KEYS)+change-header-label( iroost · 🔒 keys locked )"
+  else print -r -- "rebind($KEYLOCK_KEYS)+change-header-label( iroost )"; fi
   ;;
 
 _tap)  # _tap ID KEY [PORT]: a left click on a row; a scroll row scrolls its section, and a session shows in the viewer
@@ -2899,7 +2913,7 @@ gh pr checks $num, fix it and push." ;;
     layout)   $SELF _lmenu $id $key ;;
     all)   browse https://github.com/pulls ;;
     refresh) prs_stale ;;
-    opus|sonnet|agy|opencode|term) LZR1_PICKED=1 $SELF _new $act $id $key ;;
+    opus|sonnet|agy|opencode|term) IROOST_PICKED=1 $SELF _new $act $id $key ;;
     test)  $SELF profile test $KP; print -n "press a key"; read -k1 -s ;;
     edit)  $SELF profile edit $KP; print -n "press a key"; read -k1 -s ;;
     remove)
@@ -2932,10 +2946,10 @@ gh pr checks $num, fix it and push." ;;
       if [[ $P_TYPE == local ]]; then clip "tmux attach -t =$KS"
       else clip "ssh ${P_KEY:+-i $P_KEY }${P_PORT:+-p $P_PORT }-t $P_HOST tmux attach -t =$KS"; fi ;;
     folder) browse $dir ;;
-    new)    LZR1_PICKED=1 $SELF _new opus $id $key ;;
-    newagy) LZR1_PICKED=1 $SELF _new agy $id $key ;;
-    newoc)  LZR1_PICKED=1 $SELF _new opencode $id $key ;;
-    newterm) LZR1_PICKED=1 $SELF _new term $id $key ;;
+    new)    IROOST_PICKED=1 $SELF _new opus $id $key ;;
+    newagy) IROOST_PICKED=1 $SELF _new agy $id $key ;;
+    newoc)  IROOST_PICKED=1 $SELF _new opencode $id $key ;;
+    newterm) IROOST_PICKED=1 $SELF _new term $id $key ;;
     termhere)   $SELF _newhere term $id $KP $dir ;;
     opushere)   $SELF _newhere opus $id $KP $dir ;;
     sonnethere) $SELF _newhere sonnet $id $KP $dir ;;
@@ -2943,7 +2957,7 @@ gh pr checks $num, fix it and push." ;;
     ochere)     $SELF _newhere opencode $id $KP $dir ;;
     # opencode 2.0 stops only on a second Esc within a few seconds.
     esc)   on 'tmux send-keys -t "=$1:" Escape
-             if [ "$2" = opencode ] || [ "$(tmux show-options -qv -t "=$1:" @lzr1_agent)" = opencode ]; then
+             if [ "$2" = opencode ] || [ "$(tmux show-options -qv -t "=$1:" @iroost_agent)" = opencode ]; then
                sleep 0.3; tmux send-keys -t "=$1:" Escape; fi' $KS $model ;;
     rename)
       read -r "new?Rename $KS to: "
@@ -3008,7 +3022,7 @@ _panel)  # _panel ID
   local id=$2 me
   rm -f $STATE/$id.quit
   trap '$SELF _quit $id' HUP TERM INT
-  printf '\e]2;lzr1 panel\a'
+  printf '\e]2;iroost\a'
   if [[ $(mode $id) == tmux ]]; then
     me=$TMUX_PANE
     print -rn -- $me >$STATE/$id.me
@@ -3024,7 +3038,7 @@ _panel)  # _panel ID
     fi
   fi
   local S=$SELF
-  # A row's menu opens on the right button (LZR1_MENU_BUTTON=left: on the left one, which then also picks the row).
+  # A row's menu opens on the right button (IROOST_MENU_BUTTON=left: on the left one, which then also picks the row).
   local menu="execute($S _menu $id {1})+reload-sync($S _list $id)" button=right-click
   [[ $MENU_BUTTON == left ]] && button=left-click
   # fzf runs a footer click on the button's release, and only when it saw that button's press. A click opens the menu
@@ -3043,11 +3057,11 @@ _panel)  # _panel ID
   # any other local process from sending commands to it.
   export FZF_API_KEY=$(openssl rand -hex 16)
   # A panel that restarts (or a second one) keeps the lock: its start action locks it again.
-  local lockstart=; [[ -e $STATE/keylock ]] && lockstart="+unbind($KEYLOCK_KEYS)+change-header-label( lzr1 · 🔒 keys locked )"
+  local lockstart=; [[ -e $STATE/keylock ]] && lockstart="+unbind($KEYLOCK_KEYS)+change-header-label( iroost · 🔒 keys locked )"
   fzf --ansi --read0 --no-input --layout=reverse --no-sort --track --id-nth=1 \
     --delimiter=$'\t' --with-nth=2 --header-lines=1 \
     --listen-unsafe --no-scrollbar --info=hidden --pointer='▌' --gutter=' ' --highlight-line \
-    --border=none --header-border=bottom --header-label=' lzr1 ' \
+    --border=none --header-border=bottom --header-label=' iroost ' \
     --footer=' [≡ menu]  [↻] ' --footer-border=top \
     --color='header:dim,footer:yellow,pointer:yellow,current-fg:bold' \
     --bind "start:reload($S _list $id)+execute-silent($S _ticker $id \$FZF_PORT)+execute-silent($S _spotpoll $id \$FZF_PORT $$)$lockstart" \
@@ -3088,8 +3102,8 @@ _panel)  # _panel ID
 _quit)  # _quit ID: close the viewer and, in the tmux layout, the layout itself
   : >$STATE/$2.quit  # first: this panel's pollers (_spotpoll, _ticker) end, though killing the layout ends us too
   if [[ $(mode $2) == tmux ]]; then
-    local tty=$(tmux -L lzr1 list-clients -t lzr1-$2 -F '#{client_tty}' 2>/dev/null | head -1)
-    tmux -L lzr1 kill-session -t lzr1-$2 2>/dev/null
+    local tty=$(tmux -L iroost list-clients -t iroost-$2 -F '#{client_tty}' 2>/dev/null | head -1)
+    tmux -L iroost kill-session -t iroost-$2 2>/dev/null
     # macOS Terminal keeps a window open after its shell ends ("[Process completed]"): close the one that held the
     # layout, unless it has other tabs.
     if [[ $(<$STATE/$2.term 2>/dev/null) == Apple_Terminal && -n $tty ]]; then
@@ -3109,7 +3123,7 @@ _quit)  # _quit ID: close the viewer and, in the tmux layout, the layout itself
 keys)
   cat <<'EOF'
 
-  lzr1-panel keys
+  iroost keys
 
   click            show that session in the viewer and move the keyboard there
   ↑ ↓              show that session in the viewer (the keyboard stays in the panel)
@@ -3117,7 +3131,7 @@ keys)
   right-click / m  the row's menu: links, copy, Claude on a PR, rename, end...
                    incl. a plain terminal (no agent) or another agent in the same folder
   now playing      with Spotify's desktop app open and signed in: a block above the footer; click ⏮ ⏸/▶ ⏭, or the bar to seek
-                   (LZR1_SPOTIFY=off hides it)
+                   (IROOST_SPOTIFY=off hides it)
   [≡ menu]         the footer menu: lock the keyboard (mouse only), new sessions (agents or a plain terminal), layout, refresh, web, theme, quit
   l                sidebar layout: move pull requests section, reorder profiles & gaps
   Alt-↑ / Alt-↓    move highlighted profile or pull requests section up / down
@@ -3156,7 +3170,7 @@ _notify)  # _notify RECORD...: list_rows' alerts, from a process of its own
   ;;
 
 notify)  # a sample alert, in the foreground, to check the tone and the notifications on this computer
-  notify_alerts "question"$'\037'"macbook"$'\037'"lzr1-panel"$'\037'"opus"$'\037'"lzr1-panel"$'\037'"main"$'\037'"Do you want to proceed with applying the sidebar menu and notification changes?"
+  notify_alerts "question"$'\037'"macbook"$'\037'"iroost"$'\037'"opus"$'\037'"iroost"$'\037'"main"$'\037'"Do you want to proceed with applying the sidebar menu and notification changes?"
   ;;
 
 remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | password | rotate | who | build
@@ -3164,9 +3178,9 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
   case $1 in
     on)
       shift
-      local allow= ttl=${LZR1_REMOTE_TTL:-8h} from=LZR1_REMOTE_TTL idle=${LZR1_REMOTE_IDLE:-30m} a uuid pw
-      local n=${LZR1_REMOTE_PWLEN:-16} secs
-      local use="usage: lzr1-panel remote on [--allow EMAIL[,EMAIL...]] [--ttl 8h] (or LZR1_REMOTE_TTL=8h; LZR1_REMOTE_IDLE=30m)"
+      local allow= ttl=${IROOST_REMOTE_TTL:-8h} from=IROOST_REMOTE_TTL idle=${IROOST_REMOTE_IDLE:-30m} a uuid pw
+      local n=${IROOST_REMOTE_PWLEN:-16} secs
+      local use="usage: iroost remote on [--allow EMAIL[,EMAIL...]] [--ttl 8h] (or IROOST_REMOTE_TTL=8h; IROOST_REMOTE_IDLE=30m)"
       while (( $# )); do
         case $1 in
           --allow|--ttl) (( $# >= 2 )) || die "$use ($1 needs a value)"
@@ -3176,10 +3190,10 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
           *) die $use ;;
         esac
       done
-      [[ $n == <-> ]] && (( n >= 12 )) || die "LZR1_REMOTE_PWLEN must be 12 or more (got $n)"
+      [[ $n == <-> ]] && (( n >= 12 )) || die "IROOST_REMOTE_PWLEN must be 12 or more (got $n)"
       _dur $ttl $from; secs=$REPLY  # the TTL in seconds, for the expiry shown
-      _dur $idle LZR1_REMOTE_IDLE
-      if _remote_live; then _remote_status; die "remote is already on (lzr1-panel remote off turns it off)"; fi
+      _dur $idle IROOST_REMOTE_IDLE
+      if _remote_live; then _remote_status; die "remote is already on (iroost remote off turns it off)"; fi
       [[ -e $RDIR/session ]] && die "remote on: the last remote is still published (above)"
       # Tailscale first: nothing starts unless it can publish.
       _ts_info
@@ -3199,8 +3213,8 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
         if [[ -t 0 ]]; then
           # Emacs keys whatever EDITOR says (vi's insert mode cannot erase the prefill); Esc answers nothing: stays off.
           zmodload zsh/zle; _ask_esc() { BUFFER=; zle accept-line }; zle -N _ask_esc
-          bindkey -N lzr1ask emacs; bindkey -M lzr1ask '^[' _ask_esc
-          vared -M lzr1ask -p "Tailscale logins allowed in (comma-separated): " allow || die "remote on: no answer"
+          bindkey -N iroostask emacs; bindkey -M iroostask '^[' _ask_esc
+          vared -M iroostask -p "Tailscale logins allowed in (comma-separated): " allow || die "remote on: no answer"
         else
           print -rnu2 -- "Tailscale logins allowed in [$allow] "; IFS= read -r a && [[ -n $a ]] && allow=$a
         fi
@@ -3209,7 +3223,7 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
       [[ -n $allow ]] || die "remote on: no login allowed in"
       # From here one remote command at a time; checked again, since another could have turned it on during the prompt.
       _remote_lock
-      if _remote_live; then _remote_status; die "remote is already on (lzr1-panel remote off turns it off)"; fi
+      if _remote_live; then _remote_status; die "remote is already on (iroost remote off turns it off)"; fi
       [[ -e $RDIR/session ]] && die "remote on: the last remote is still published (above)"
       # Tailscale logins: an e-mail, or name@github, name@passkey (no dot after the @).
       for a in ${(s:,:)allow}; do [[ $a == [^@]##@[^@]## ]] || die "not a Tailscale login (like you@example.com): $a"; done
@@ -3232,11 +3246,11 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
       _remote_save
       ( umask 077; : >$RDIR/ttyd.log; : >>$RDIR/remote.log )  # errors, refused logins and paths, never the password
       # A browser gets its own panel in the tmux layout (a Ghostty split cannot be shown in a browser), splash off;
-      # LZR1_REMOTE marks its tmux session so it ends with the browser and with remote off. ttyd runs in a process group
+      # IROOST_REMOTE marks its tmux session so it ends with the browser and with remote off. ttyd runs in a process group
       # of its own (RDET), and must not ignore HUP instead: it ends a browser's open with SIGHUP when the browser leaves.
-      $RDET ttyd -i $RDIR/ttyd.sock -b /$uuid -W -m 4 -t titleFixed=lzr1 \
+      $RDET ttyd -i $RDIR/ttyd.sock -b /$uuid -W -m 4 -t titleFixed=iroost \
         env -u GHOSTTY_RESOURCES_DIR -u TERM_PROGRAM -u TMUX -u TMUX_PANE -u COLUMNS -u LINES \
-        LZR1_SPLASH=0 LZR1_REMOTE=$uuid $SELF open </dev/null >$RDIR/ttyd.log 2>&1 &!
+        IROOST_SPLASH=0 IROOST_REMOTE=$uuid $SELF open </dev/null >$RDIR/ttyd.log 2>&1 &!
       RS[ttydpid]=${!}  # (RS[k]=$! would store "$!" itself)
       _remote_save
       _remote_start $uuid $ttl || { a=$REPLY; _remote_off; die $a }
@@ -3244,7 +3258,7 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
       print -r -- "  url:      $RS[url]"
       print -r -- "  password: $pw"
       clip $RS[url]
-      print -r -- "copied the URL; lzr1-panel remote password copies the password, lzr1-panel remote off ends it"
+      print -r -- "copied the URL; iroost remote password copies the password, iroost remote off ends it"
       ;;
     off)
       _remote_lock
@@ -3257,18 +3271,27 @@ remote)  # remote on [--allow EMAIL[,EMAIL]] [--ttl 8h] | off | status | url | p
     rotate) _remote_rotate ;;
     who) _remote_live || die "remote is off"; _remote_who ;;
     build) _remote_gw; print -r -- "gateway: $REPLY" ;;
-    watch) [[ $2 == [0-9a-f](#c8)-[0-9a-f](#c4)-[0-9a-f](#c4)-[0-9a-f](#c4)-[0-9a-f](#c12) ]] || die "usage: lzr1-panel remote watch UUID (internal)"
+    watch) [[ $2 == [0-9a-f](#c8)-[0-9a-f](#c4)-[0-9a-f](#c4)-[0-9a-f](#c4)-[0-9a-f](#c12) ]] || die "usage: iroost remote watch UUID (internal)"
       _remote_watch $2 ;;
-    *) die "usage: lzr1-panel remote on [--allow EMAIL[,EMAIL...]] [--ttl 8h] | off | status | url | password | rotate | who (LZR1_REMOTE_TTL, LZR1_REMOTE_IDLE, LZR1_REMOTE_NOTIFY: docs/remote.md)" ;;
+    *) die "usage: iroost remote on [--allow EMAIL[,EMAIL...]] [--ttl 8h] | off | status | url | password | rotate | who (IROOST_REMOTE_TTL, IROOST_REMOTE_IDLE, IROOST_REMOTE_NOTIFY: docs/remote.md)" ;;
   esac
   ;;
 
-splash) lzr1_splash ${2:+${2#--}} ;;
+splash) iroost_splash ${2:+${2#--}} ;;
 
-version|--version) print -r -- "lzr1-panel $VERSION" ;;
+version|--version) print -r -- "iroost $VERSION" ;;
+
+help|-h|--help)
+  sed -n '1d; /^#/!q; p' $SELF | sed 's/^# \{0,1\}//'  # the header comment, however long
+  ;;
+
+'')  # bare: what to try, short; `iroost help` has every command
+  _suggest
+  ;;
 
 *)
-  sed -n '1d; /^#/!q; p' $SELF | sed 's/^# \{0,1\}//'  # the header comment, however long
-  [[ -z $1 || $1 == (help|-h|--help) ]] || exit 1
+  print -ru2 -- "iroost: no command '$1'. Try one of these, or 'iroost help' for all of them."
+  _suggest >&2
+  exit 1
   ;;
 esac

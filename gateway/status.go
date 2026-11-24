@@ -10,7 +10,7 @@ import (
 
 // statusPath is what the phone's Remote tab (client.js) reads: who is signed in, until when the remote runs and its
 // idle limit. Nothing it returns lets a browser change the remote.
-const statusPath = "lzr1-status"
+const statusPath = "iroost-status"
 
 type status struct {
 	You         string   `json:"you"`

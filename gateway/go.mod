@@ -1,3 +1,3 @@
-module github.com/victorlazari/lzr1-panel/gateway
+module github.com/victorlazari/iroost/gateway
 
 go 1.26

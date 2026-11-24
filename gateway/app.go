@@ -15,13 +15,13 @@ import (
 // standalone display, which drops the browser's bars for the panel's own, and its icons. Served after the session
 // check like client.js; the manifest link carries crossorigin="use-credentials" so the browser sends the cookie.
 const (
-	manifestPath = "lzr1-manifest.json"
-	iconPath     = "lzr1-icon-" // + 192.png, 512.png
+	manifestPath = "iroost-manifest.json"
+	iconPath     = "iroost-icon-" // + 192.png, 512.png
 )
 
 const manifestJSON = `{
-  "name": "lzr1 panel",
-  "short_name": "lzr1",
+  "name": "iroost",
+  "short_name": "iroost",
   "description": "Claude Code and opencode sessions, from anywhere",
   "start_url": "./",
   "scope": "./",

@@ -1,4 +1,4 @@
-// lzr1-remote-gw: the login gateway in front of ttyd for `lzr1-panel remote`.
+// iroost-remote-gw: the login gateway in front of ttyd for `iroost remote`.
 // It listens on a loopback TCP address or a private Unix socket (published by `tailscale serve`), checks the
 // caller, and proxies HTTP and WebSocket traffic to ttyd's Unix socket. No third-party code.
 package main
@@ -44,7 +44,7 @@ var errUsage = errors.New("usage")
 func parseFlags(args []string, stderr io.Writer) (config, error) {
 	var c config
 	var allow string
-	fs := flag.NewFlagSet("lzr1-remote-gw", flag.ContinueOnError)
+	fs := flag.NewFlagSet("iroost-remote-gw", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&c.listen, "listen", "", "Unix socket, or loopback host:port (port 0 picks one), to serve on (required)")
 	fs.StringVar(&c.upstream, "upstream", "", "ttyd's Unix socket (required)")
@@ -61,7 +61,7 @@ func parseFlags(args []string, stderr io.Writer) (config, error) {
 		return c, errUsage
 	}
 	bad := func(f string, a ...any) (config, error) {
-		fmt.Fprintf(stderr, "lzr1-remote-gw: "+f+"\n", a...)
+		fmt.Fprintf(stderr, "iroost-remote-gw: "+f+"\n", a...)
 		return c, errUsage
 	}
 	if fs.NArg() > 0 {
@@ -161,7 +161,7 @@ func listenUnix(path string) (net.Listener, error) {
 }
 
 // listen opens --listen: a loopback TCP address (parseFlags checked it is one), else a Unix socket.
-// tailscale serve in the macOS app cannot reach a Unix socket, so lzr1-panel uses 127.0.0.1:0 there.
+// tailscale serve in the macOS app cannot reach a Unix socket, so iroost uses 127.0.0.1:0 there.
 func listen(addr string) (net.Listener, error) {
 	if strings.Contains(addr, "/") {
 		return listenUnix(addr)
@@ -190,7 +190,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return 2
 	}
 	fail := func(err error) int {
-		fmt.Fprintf(stderr, "lzr1-remote-gw: %v\n", err)
+		fmt.Fprintf(stderr, "iroost-remote-gw: %v\n", err)
 		return 1
 	}
 	logw := stderr
@@ -202,7 +202,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		defer f.Close()
 		logw = f
 	}
-	logger := log.New(logw, "lzr1-remote-gw: ", log.LstdFlags)
+	logger := log.New(logw, "iroost-remote-gw: ", log.LstdFlags)
 	var audit *auditLog
 	if c.auditPath != "" {
 		f, err := openAudit(c.auditPath)

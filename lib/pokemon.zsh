@@ -1,6 +1,6 @@
-# lib/pokemon.zsh: a Pokémon for every session (docs/pokemon.md). Sourced by bin/lzr1-panel after $STATE is set.
+# lib/pokemon.zsh: a Pokémon for every session (docs/pokemon.md). Sourced by bin/iroost after $STATE is set.
 #
-#   LZR1_POKEMON=off|text|sprite   off: nothing; text: a mood and the Pokémon's name on each card; sprite (default):
+#   IROOST_POKEMON=off|text|sprite   off: nothing; text: a mood and the Pokémon's name on each card; sprite (default):
 #                                  a half-block sprite beside each card (needs curl and ImageMagick, else text)
 #                                  The [...] menu in the panel's footer sets it for good (CONFIG/pokemon).
 #
@@ -24,13 +24,13 @@ typeset -ga PK_DEX=(
   kabuto kabutops aerodactyl snorlax articuno zapdos moltres dratini dragonair dragonite mewtwo mew
 )
 
-# LZR1_POKEMON wins; else what the [...] menu saved in $CONFIG/pokemon; else sprite (without curl and ImageMagick the
+# IROOST_POKEMON wins; else what the [...] menu saved in $CONFIG/pokemon; else sprite (without curl and ImageMagick the
 # panel shows text tags).
-PK_MODE=${LZR1_POKEMON:-}
+PK_MODE=${IROOST_POKEMON:-}
 [[ -z $PK_MODE && -r $CONFIG/pokemon ]] && PK_MODE=$(<$CONFIG/pokemon)
 [[ $PK_MODE == (off|text|sprite) ]] || PK_MODE=sprite
 PK_ART=$STATE/pokemon-art
-PK_IDLE=${LZR1_POKEMON_SLEEP:-180}  # seconds idle before it sleeps
+PK_IDLE=${IROOST_POKEMON_SLEEP:-180}  # seconds idle before it sleeps
 [[ $PK_IDLE == <-> ]] || PK_IDLE=180
 PK_BASE=https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite
 
@@ -57,13 +57,13 @@ _pk_ball() {
 # The Kitty graphics protocol, where the terminal has it (Ghostty, kitty; not through tmux): the sprite is sent once as
 # a PNG (term.png, 240x144) with a virtual placement ten cells by three, and the card's lines hold Unicode placeholders
 # (U+10EEEE, a diacritic for the row and one for the column, the image id in the foreground color), so the picture sits
-# inside the text that fzf draws. LZR1_POKEMON_IMAGES=0 never, 1 always (where the terminal has it), else auto.
+# inside the text that fzf draws. IROOST_POKEMON_IMAGES=0 never, 1 always (where the terminal has it), else auto.
 typeset -ga PK_DIAC=( $'\u0305' $'\u030D' $'\u030E' $'\u0310' $'\u0312' $'\u033D' $'\u033E' $'\u033F' $'\u0346' $'\u034A' )
 
 # _pk_kitty_ok: true when the card's art can be a real picture (PK_PANEL names the panel that draws it)
 _pk_kitty_ok() {
-  [[ -n $PK_PANEL && ${LZR1_POKEMON_IMAGES:-auto} != 0 ]] || return 1
-  [[ ${LZR1_POKEMON_IMAGES:-auto} == 1 ]] && return 0
+  [[ -n $PK_PANEL && ${IROOST_POKEMON_IMAGES:-auto} != 0 ]] || return 1
+  [[ ${IROOST_POKEMON_IMAGES:-auto} == 1 ]] && return 0
   [[ -z $TMUX && ( $TERM_PROGRAM == ghostty || -n $GHOSTTY_RESOURCES_DIR || -n $KITTY_WINDOW_ID ) ]]
 }
 

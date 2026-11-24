@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lzr1 PR Section Options</title>
+<title>iroost PR Section Options</title>
 <!-- Template: ring:visualizing standard.html -->
-<!-- Artifact brief: Audience: the user choosing how lzr1-panel lists their own open pull requests under the online sessions, and how a right-click menu reads. Physical scene: the panel as it sits in Ghostty, sidebar on the left, viewer on the right. Source facts: the account is identified automatically, from gh's signed-in account (gh api graphql viewer) or, without gh, from the SSH key (ssh -T git@github.com answers "Hi LOGIN!"); one GitHub search (is:pr is:open author:@me) returns per PR the repository, number, title, URL, draft flag, head branch, review decision, mergeable state, latest commit check state and last update; fzf 0.74 has right-click, left-click and click-footer events. Entities: the account, its open PRs, the five layouts, the context menus for a session, a PR and a machine heading. Hierarchy: the five mockups first, the menu second, the data-source table last. Message: pick 1 to 5; right-click any row for its menu. Non-invention boundary: PR rows and sessions are sample values, labeled; only fields the GitHub search returns appear. -->
+<!-- Artifact brief: Audience: the user choosing how iroost lists their own open pull requests under the online sessions, and how a right-click menu reads. Physical scene: the panel as it sits in Ghostty, sidebar on the left, viewer on the right. Source facts: the account is identified automatically, from gh's signed-in account (gh api graphql viewer) or, without gh, from the SSH key (ssh -T git@github.com answers "Hi LOGIN!"); one GitHub search (is:pr is:open author:@me) returns per PR the repository, number, title, URL, draft flag, head branch, review decision, mergeable state, latest commit check state and last update; fzf 0.74 has right-click, left-click and click-footer events. Entities: the account, its open PRs, the five layouts, the context menus for a session, a PR and a machine heading. Hierarchy: the five mockups first, the menu second, the data-source table last. Message: pick 1 to 5; right-click any row for its menu. Non-invention boundary: PR rows and sessions are sample values, labeled; only fields the GitHub search returns appear. -->
 <!-- Visual thesis: five terminals, same sessions and same PRs, only the PR section changes; right-click opens the menu exactly where the panel would draw it. -->
 <!-- Design choices: 1) identical sample sessions and PRs across 1 to 5 so only the PR layout differs; 2) each sidebar at its real 56-column width; 3) one status glyph per PR from the check state and review decision, matching the session glyphs' colors; 4) the menu replaces the panel's list, as fzf draws it, not a floating OS menu. -->
 <!-- ============================================
@@ -513,8 +513,8 @@ table.src td code{font-family:var(--alf-font-mono);font-size:12px;background:var
 
 
 <section class="animate" style="--i:0">
-<h1>lzr1 panel: your pull requests under the sessions</h1>
-<p class="sub">Five ways to list the open pull requests of the GitHub account on this machine, found automatically: the account gh is signed in to, or, without gh, the account your SSH key belongs to. Every layout keeps the sessions as they are (layout A) and adds the PR section after the online machines, at the panel's real 56 columns. <b>Right-click any row</b> (a session, a PR or a machine heading) for its menu; click a menu line to run it, or anywhere else to close it. Layout 1, cards, is the one lzr1-panel uses (chosen on 28 Oct 2026). Sessions and PRs are <b>sample values</b>.</p>
+<h1>iroost: your pull requests under the sessions</h1>
+<p class="sub">Five ways to list the open pull requests of the GitHub account on this machine, found automatically: the account gh is signed in to, or, without gh, the account your SSH key belongs to. Every layout keeps the sessions as they are (layout A) and adds the PR section after the online machines, at the panel's real 56 columns. <b>Right-click any row</b> (a session, a PR or a machine heading) for its menu; click a menu line to run it, or anywhere else to close it. Layout 1, cards, is the one iroost uses (chosen on 28 Oct 2026). Sessions and PRs are <b>sample values</b>.</p>
 </section>
 <div class="picker animate" style="--i:1">menu button:
  <button type="button" data-b="right" aria-pressed="true">right-click</button>
@@ -534,7 +534,7 @@ table.src td code{font-family:var(--alf-font-mono);font-size:12px;background:var
 <tr><td>Age since last update</td><td><code>updatedAt</code></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
 <tr><td>Selectable, with a menu</td><td>rows in the panel's list (1 to 4); fzf <code>click-footer</code> words (5)</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">click only</td></tr>
 </tbody></table></div>
-<p class="note">Glyphs: <span class="ok">✓</span> checks passed and approved or no review required · <span class="bad">✗</span> checks failed or changes requested · <span class="q">⧗</span> checks running or review pending · <span class="i">◌</span> draft · <span class="i">·</span> no checks. The search runs at most once a minute (it takes about a second), so the 15-second refresh stays fast. <code>LZR1_PRS=0</code> hides the section; <code>LZR1_MENU_BUTTON=left</code> moves the menu to the left button.</p>
+<p class="note">Glyphs: <span class="ok">✓</span> checks passed and approved or no review required · <span class="bad">✗</span> checks failed or changes requested · <span class="q">⧗</span> checks running or review pending · <span class="i">◌</span> draft · <span class="i">·</span> no checks. The search runs at most once a minute (it takes about a second), so the 15-second refresh stays fast. <code>IROOST_PRS=0</code> hides the section; <code>IROOST_MENU_BUTTON=left</code> moves the menu to the left button.</p>
 </section>
   <!-- ========== FOOTER ========== -->
 
@@ -572,7 +572,7 @@ var P=[{n:"oracle-sessions",kind:"ssh",s:[
 var R=[{repo:"LerianStudio/lerian-clients",n:906,t:"fix(oncall): guard ownerless VoIP providers",br:"fix/voip-owner",g:"q",rev:"review required",age:"2h"},
  {repo:"LerianStudio/midaz",n:1412,t:"feat(fees): fee rules per ledger",br:"feat/fees",g:"bad",rev:"changes requested",age:"1d"},
  {repo:"LerianStudio/midaz",n:1398,t:"chore: bump lib-commons",br:"chore/lib-commons",g:"ok",rev:"approved · mergeable",age:"3d"},
- {repo:"victorlazari/lzr1-panel",n:2,t:"Panel: your PRs under the sessions",br:"feat/prs",g:"i",draft:1,rev:"draft",age:"5m"}];
+ {repo:"victorlazari/iroost",n:2,t:"Panel: your PRs under the sessions",br:"feat/prs",g:"i",draft:1,rev:"draft",age:"5m"}];
 var LOGIN="victorlazari",W=56,BTN="right";
 var G={w:'<span class="w">▶</span>',q:'<span class="q">⧗</span>',i:'<span class="i">·</span>'};
 var PG={ok:'<span class="ok">✓</span>',bad:'<span class="bad">✗</span>',q:'<span class="q">⧗</span>',i:'<span class="i">◌</span>'};

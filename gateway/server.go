@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const cookieName = "lzr1_remote"
+const cookieName = "iroost_remote"
 
 // Applied to every response, the gateway's own and ttyd's. ttyd's page bootstraps with inline
 // script and style; it loads nothing from another origin. Referrer-Policy is same-origin, not no-referrer: with
@@ -101,7 +101,7 @@ func newServer(c config, pwHash [32]byte, logger *log.Logger) *server {
 				}
 			}
 			if s.isPage(pr.In) {
-				// ttyd's index gets lzr1-client.js (inject.go): ask for it plain and whole.
+				// ttyd's index gets iroost-client.js (inject.go): ask for it plain and whole.
 				pr.Out.Header.Del("Accept-Encoding")
 				pr.Out.Header.Del("If-None-Match")
 				pr.Out.Header.Del("If-Modified-Since")

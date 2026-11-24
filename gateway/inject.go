@@ -20,7 +20,7 @@ import (
 var clientJS []byte
 
 const (
-	clientPath = "lzr1-client.js"
+	clientPath = "iroost-client.js"
 	// ttyd's page has no viewport: a phone would lay it out 980px wide and shrink it. With the phone's real width the
 	// panel takes its narrow layout; viewport-fit lets client.js keep its key bar clear of the home bar.
 	clientTag = `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">` +
@@ -75,7 +75,7 @@ func (s *server) injectClient(resp *http.Response) error {
 		resp.Header.Del("Content-Length")
 		resp.ContentLength = -1
 	default:
-		s.log.Printf("ttyd's page: Content-Encoding %q, sent without lzr1-client.js", enc)
+		s.log.Printf("ttyd's page: Content-Encoding %q, sent without iroost-client.js", enc)
 		return nil
 	}
 	page, err := io.ReadAll(io.LimitReader(body, maxPage+1))
@@ -83,7 +83,7 @@ func (s *server) injectClient(resp *http.Response) error {
 		return fmt.Errorf("ttyd's page: %v", err)
 	}
 	if len(page) > maxPage {
-		s.log.Printf("ttyd's page is over %d bytes: sent without lzr1-client.js", maxPage)
+		s.log.Printf("ttyd's page is over %d bytes: sent without iroost-client.js", maxPage)
 		resp.Body = struct {
 			io.Reader
 			io.Closer

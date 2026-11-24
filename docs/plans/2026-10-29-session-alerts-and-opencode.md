@@ -10,7 +10,7 @@
 **Goal:** The panel tells you when a session needs you (a mark on its row, a tone, an OS notification on macOS and
 Linux), and it can start opencode sessions in tmux, with auto-approve on, next to the Claude ones.
 
-**Architecture:** Everything stays in `bin/lzr1-panel` (zsh), with the scripts sent to a profile's machine kept POSIX
+**Architecture:** Everything stays in `bin/iroost` (zsh), with the scripts sent to a profile's machine kept POSIX
 `sh`. Alerts are worked out on the computer running the panel, from the records `LIST_SCRIPT` already returns on
 every refresh: the panel keeps each session's last state in `$STATE`, and a change into "needs you" makes an alert.
 opencode sessions reuse the `start` / `run` / `_new` path with a second agent, marked on the tmux session so the
@@ -48,10 +48,10 @@ ends between two samples (idle → idle) makes no "finished" alert. A question s
 
 **Goal:** each refresh compares every session's state with the last one seen; a change into "needs you" marks the
 session unread (`✱` on its row, a count in the summary line) until you look at it in the viewer.
-**Scope:** `bin/lzr1-panel` (`list_rows`, `_list`, `_select`, `keys`), `README.md`
+**Scope:** `bin/iroost` (`list_rows`, `_list`, `_select`, `keys`), `README.md`
 **Dependencies:** none
 **Done when:** with a test profile and a fake tmux session, the second `_list` after a working → idle or idle →
-question change prints the row with `✱` and the summary with `1✱`; selecting the row clears it; `lzr1-panel list`
+question change prints the row with `✱` and the summary with `1✱`; selecting the row clears it; `iroost list`
 never marks or alerts.
 **Status:** Done
 
@@ -59,15 +59,15 @@ never marks or alerts.
 
 - [x] Done
 
-**Context:** `list_rows` (`bin/lzr1-panel:367-422`) gathers each profile's records (fields at
-`bin/lzr1-panel:103-104`: name, state `work|wait|idle`, …, `waitfor`) and renders them. It is called by
-`lzr1-panel list` (`:568-570`) and by `_list ID` (`:572-574`), which the panel's refreshes, the 15 s ticker
+**Context:** `list_rows` (`bin/iroost:367-422`) gathers each profile's records (fields at
+`bin/iroost:103-104`: name, state `work|wait|idle`, …, `waitfor`) and renders them. It is called by
+`iroost list` (`:568-570`) and by `_list ID` (`:572-574`), which the panel's refreshes, the 15 s ticker
 (`:740`) and `_pos` (`:748`) all go through. `waitfor` is `"Claude exited · Enter resumes"` for an exited Claude
 (`:132`). Old state is removed by `open` (`rm -rf $STATE/*(Nmd+1)`, `:594`).
 
 **Implementation vision:**
 - `list_rows` takes an optional panel ID: `list_rows [ID]`. Only `_list` passes it (`list_rows $2`); without an ID
-  (`lzr1-panel list`) nothing is tracked, marked or alerted.
+  (`iroost list`) nothing is tracked, marked or alerted.
 - Per session, keep the last seen state in `$STATE/seen/<profile>/<session>`: one line, `state<US>waitfor`
   (`<US>` = `\037`, as in the records). Shared by every open panel, so two panels never alert twice for one change.
 - Compare and write under one lock for the whole refresh: `mkdir $STATE/seen.lock` (remove it first when older than
@@ -94,30 +94,30 @@ never marks or alerts.
   keeps them): it never overwrites one another panel is about to compare, and never alerts.
 
 **Files:**
-- Modify: `bin/lzr1-panel:364-422` (`list_rows`)
-- Modify: `bin/lzr1-panel:572-574` (`_list` passes its ID)
+- Modify: `bin/iroost:364-422` (`list_rows`)
+- Modify: `bin/iroost:572-574` (`_list` passes its ID)
 
-**Verification:** `zsh -n bin/lzr1-panel`. Then, with a scratch config and cache (never your real ones):
+**Verification:** `zsh -n bin/iroost`. Then, with a scratch config and cache (never your real ones):
 ```sh
-export LZR1_CONFIG=$(mktemp -d) XDG_CACHE_HOME=$(mktemp -d) LZR1_PRS=0 LZR1_NOTIFY=0 LZR1_SOUND=0
-bin/lzr1-panel profile add t --local --repos /tmp --claude /bin/sh
+export IROOST_CONFIG=$(mktemp -d) XDG_CACHE_HOME=$(mktemp -d) IROOST_PRS=0 IROOST_NOTIFY=0 IROOST_SOUND=0
+bin/iroost profile add t --local --repos /tmp --claude /bin/sh
 tmux new-session -d -s alert-t -c /tmp 'echo "esc to interrupt"; sleep 600'
-bin/lzr1-panel _list 1 >/dev/null; bin/lzr1-panel _list 1 >/dev/null          # seeds, then records
+bin/iroost _list 1 >/dev/null; bin/iroost _list 1 >/dev/null          # seeds, then records
 tmux respawn-pane -k -t =alert-t: 'clear; echo "Do you want to proceed?"; sleep 600'
-bin/lzr1-panel _list 1 | tr '\0' '\n' | grep -c '✱'                           # 1 (after Task 1.1.2)
-ls $XDG_CACHE_HOME/lzr1-panel/unread/t/                                        # alert-t
+bin/iroost _list 1 | tr '\0' '\n' | grep -c '✱'                           # 1 (after Task 1.1.2)
+ls $XDG_CACHE_HOME/iroost/unread/t/                                        # alert-t
 tmux kill-session -t =alert-t
 ```
-`LZR1_NOTIFY` / `LZR1_SOUND` are ignored until Epic 1.2 exists.
+`IROOST_NOTIFY` / `IROOST_SOUND` are ignored until Epic 1.2 exists.
 
 **Done when:** the rule above fires exactly once per change, never on a panel's first refresh, never from
-`lzr1-panel list`, and never twice when two panels refresh together.
+`iroost list`, and never twice when two panels refresh together.
 
 #### Task 1.1.2: Show the unread mark and clear it when you look
 
 - [x] Done
 
-**Context:** a session's first line is built at `bin/lzr1-panel:408`: state glyph, name padded to
+**Context:** a session's first line is built at `bin/iroost:408`: state glyph, name padded to
 `W - 6 - ${#right}`, model and age, `●` when attached. The summary heading is `:419`
 (`"$n sessions · $w▶ $q⧗ $i·"`). The viewer's target is written by `_select` at `:694` and `:709`
 (`$STATE/$id.target`); the currently shown key is `$(<$STATE/$id.target)`.
@@ -135,11 +135,11 @@ tmux kill-session -t =alert-t
   `✱ finished or asking since you last looked`.
 
 **Files:**
-- Modify: `bin/lzr1-panel:398-419` (row and summary), `:688-710` (`_select`), `:1083` (`keys`)
+- Modify: `bin/iroost:398-419` (row and summary), `:688-710` (`_select`), `:1083` (`keys`)
 - Modify: `README.md` ("What you get" table, the panel sample)
 
-**Verification:** `zsh -n bin/lzr1-panel`; the Task 1.1.1 script shows one `✱` row and `1✱` in the first item;
-then `bin/lzr1-panel _select 1 t/alert-t force` (in the same scratch env) and `_list 1` again shows no `✱`.
+**Verification:** `zsh -n bin/iroost`; the Task 1.1.1 script shows one `✱` row and `1✱` in the first item;
+then `bin/iroost _select 1 t/alert-t force` (in the same scratch env) and `_list 1` again shows no `✱`.
 
 **Done when:** the mark appears after an alert, survives refreshes, and disappears once the session is selected;
 row alignment matches unmarked rows at the default 56 columns.
@@ -148,11 +148,11 @@ row alignment matches unmarked rows at the default 56 columns.
 
 **Goal:** each refresh that produced alerts plays one tone and shows OS notifications on the computer running the
 panel, with settings to turn either off, a test command, and doctor checks.
-**Scope:** `bin/lzr1-panel` (new `notify_alerts`, `notify` command, `genv`, `doctor`), `README.md`,
+**Scope:** `bin/iroost` (new `notify_alerts`, `notify` command, `genv`, `doctor`), `README.md`,
 `docs/troubleshooting.md`
 **Dependencies:** Epic 1.1 (the `alerts` array and its record format)
-**Done when:** `lzr1-panel notify` plays the tone and shows a notification on macOS (with and without
-`terminal-notifier`) and on Linux with `notify-send`; a real alert does the same; `LZR1_SOUND=0` / `LZR1_NOTIFY=0`
+**Done when:** `iroost notify` plays the tone and shows a notification on macOS (with and without
+`terminal-notifier`) and on Linux with `notify-send`; a real alert does the same; `IROOST_SOUND=0` / `IROOST_NOTIFY=0`
 silence each; the refresh never waits on either.
 **Status:** Done
 
@@ -160,7 +160,7 @@ silence each; the refresh never waits on either.
 
 - [x] Done
 
-**Context:** alerts are collected in `list_rows` (Task 1.1.1). `browse` and `clip` (`bin/lzr1-panel:351-359`) show
+**Context:** alerts are collected in `list_rows` (Task 1.1.1). `browse` and `clip` (`bin/iroost:351-359`) show
 the house pattern for macOS / Wayland / X11 branches. `ghostty()` (`:336`) already sends AppleScript on stdin.
 `text` comes from the session's screen, so it is untrusted: it must never be pasted into AppleScript or a shell
 command line.
@@ -168,34 +168,34 @@ command line.
 **Implementation vision:**
 - `notify_alerts` takes the alert records as arguments and runs in the background from `list_rows` (`… &!`) after
   the loop, so a slow `osascript` never delays the list.
-- **Tone** (`LZR1_SOUND`, default `1`; `0` off; any other value is a sound file path): one per refresh, however many
+- **Tone** (`IROOST_SOUND`, default `1`; `0` off; any other value is a sound file path): one per refresh, however many
   alerts. macOS: `afplay` with the file, default `/System/Library/Sounds/Glass.aiff`. Linux: `paplay` with the file,
   default `/usr/share/sounds/freedesktop/stereo/complete.oga`; else `canberra-gtk-play -i complete`; else a terminal
   bell to `/dev/tty`. Missing player or file → silent, no error.
-- **Notification** (`LZR1_NOTIFY`, default `1`; `0` off): one per alert, up to 3; more than 3 → the first 2 and one
+- **Notification** (`IROOST_NOTIFY`, default `1`; `0` off): one per alert, up to 3; more than 3 → the first 2 and one
   "N more sessions need you". Title: `<session> finished` (`done`) or `<session> asks` (`question`); subtitle /
   app: the profile; body: `text`, with control characters stripped and cut to 120 characters (`_cut`), else
   `your turn`.
-  - macOS with `terminal-notifier`: `-title`, `-subtitle`, `-message`, `-group lzr1-<profile>-<session>` (a newer
+  - macOS with `terminal-notifier`: `-title`, `-subtitle`, `-message`, `-group iroost-<profile>-<session>` (a newer
     alert replaces the session's older one), no `-sound` (the tone is ours).
   - macOS without it: `osascript` reading `on run argv … display notification (item 3 of argv) with title (item 1
     of argv) subtitle (item 2 of argv) … end run` from stdin, the three strings passed as argv. No sound name.
-  - Linux with `notify-send` and `$DISPLAY` or `$WAYLAND_DISPLAY`: `notify-send -a lzr1-panel TITLE BODY`.
+  - Linux with `notify-send` and `$DISPLAY` or `$WAYLAND_DISPLAY`: `notify-send -a iroost TITLE BODY`.
   - Anything else: no notification (the tone and the row mark still work).
-- `genv` (`:343`) passes `LZR1_NOTIFY` and `LZR1_SOUND` into Ghostty splits, like the other `LZR1_*` settings.
-- New command `notify` (`lzr1-panel notify`): calls `notify_alerts` in the foreground with one sample `question`
-  alert (`lzr1-panel` / `test` / `this is how a session asks for you`), for checking setup. Add it to the usage
+- `genv` (`:343`) passes `IROOST_NOTIFY` and `IROOST_SOUND` into Ghostty splits, like the other `IROOST_*` settings.
+- New command `notify` (`iroost notify`): calls `notify_alerts` in the foreground with one sample `question`
+  alert (`iroost` / `test` / `this is how a session asks for you`), for checking setup. Add it to the usage
   block (`:5-16`, printed by `:1095` from lines 2-18: keep the block within those lines or update the `sed` range).
 - Edge cases: `osascript` refused by macOS notification permissions → it fails silently in the background, and
   doctor/troubleshooting cover it; several panels open → the shared seen state (Task 1.1.1) means only one alerts.
 
 **Files:**
-- Modify: `bin/lzr1-panel` (new `notify_alerts` near `clip`, `:351-359`; call site in `list_rows`; `genv` `:343`;
+- Modify: `bin/iroost` (new `notify_alerts` near `clip`, `:351-359`; call site in `list_rows`; `genv` `:343`;
   `notify)` command in the `case`; usage block `:5-16`)
 
-**Verification:** `zsh -n bin/lzr1-panel`; `bin/lzr1-panel notify` → tone plus a notification titled "test asks";
-`LZR1_SOUND=0 bin/lzr1-panel notify` → notification only; `LZR1_NOTIFY=0 bin/lzr1-panel notify` → tone only.
-Rerun the Task 1.1.1 script without `LZR1_NOTIFY=0 LZR1_SOUND=0`: the question change gives one tone and one
+**Verification:** `zsh -n bin/iroost`; `bin/iroost notify` → tone plus a notification titled "test asks";
+`IROOST_SOUND=0 bin/iroost notify` → notification only; `IROOST_NOTIFY=0 bin/iroost notify` → tone only.
+Rerun the Task 1.1.1 script without `IROOST_NOTIFY=0 IROOST_SOUND=0`: the question change gives one tone and one
 notification; a session screen containing `"; do shell script "say hi` in its question shows that text literally.
 
 **Done when:** tone and notifications work on macOS (both paths) and Linux, never block `_list`, and untrusted
@@ -205,18 +205,18 @@ screen text cannot run anything.
 
 - [x] Done
 
-**Context:** `doctor` (`bin/lzr1-panel:488-527`) prints sections with `_ok` / `_no` / `_hint`; optional things use
+**Context:** `doctor` (`bin/iroost:488-527`) prints sections with `_ok` / `_no` / `_hint`; optional things use
 `print "  · …"` (e.g. Ghostty, `:507-508`) and do not set `bad`. README's Settings table and troubleshooting's
 sections are where users look.
 
 **Implementation vision:**
-- Doctor gets an `alerts` section after `github`, informational only (never sets `bad`): shows `LZR1_SOUND=0` /
-  `LZR1_NOTIFY=0` when set; macOS: `✓ tone: afplay`, then `✓ notifications: terminal-notifier` or
+- Doctor gets an `alerts` section after `github`, informational only (never sets `bad`): shows `IROOST_SOUND=0` /
+  `IROOST_NOTIFY=0` when set; macOS: `✓ tone: afplay`, then `✓ notifications: terminal-notifier` or
   `· notifications: osascript` with the hint `brew install terminal-notifier (groups them per session)`; Linux:
   `✓ notifications: notify-send` or `· no notify-send` with the hint `install libnotify (libnotify-bin on
   Debian/Ubuntu)`, and the tone player found (`paplay`, `canberra-gtk-play`, else "terminal bell"). Ends with the
-  hint `lzr1-panel notify sends a test`.
-- README: a "What you get" row for alerts; Settings rows for `LZR1_SOUND` and `LZR1_NOTIFY`; `lzr1-panel notify` in
+  hint `iroost notify sends a test`.
+- README: a "What you get" row for alerts; Settings rows for `IROOST_SOUND` and `IROOST_NOTIFY`; `iroost notify` in
   "From the command line".
 - Troubleshooting, new section "Alerts": "No sound" (setting, player, file), "No notification on macOS" (System
   Settings → Notifications: allow Script Editor, or terminal-notifier; Focus modes), "No notification on Linux"
@@ -224,10 +224,10 @@ sections are where users look.
   the idle → idle case from this plan's Known limit), and add it to the section list at the top.
 
 **Files:**
-- Modify: `bin/lzr1-panel:488-527` (`doctor`)
+- Modify: `bin/iroost:488-527` (`doctor`)
 - Modify: `README.md`, `docs/troubleshooting.md`
 
-**Verification:** `zsh -n bin/lzr1-panel lib/splash.zsh && bash -n install.sh`; `bin/lzr1-panel doctor` shows the
+**Verification:** `zsh -n bin/iroost lib/splash.zsh && bash -n install.sh`; `bin/iroost doctor` shows the
 alerts section and its exit status is unchanged by it.
 
 **Done when:** doctor reports what alerts will use on this computer, and the docs cover every setting and the
@@ -237,7 +237,7 @@ common failures.
 
 **Goal:** the review's Medium findings are fixed: a refresh fzf kills mid-way never leaves a lock that stalls the
 next ones nor loses an alert, and two panels never move the shared state back in time.
-**Scope:** `bin/lzr1-panel` (`list_rows` tracking, `open`, `_notify_one`)
+**Scope:** `bin/iroost` (`list_rows` tracking, `open`, `_notify_one`)
 **Dependencies:** Epics 1.1, 1.2
 **Done when:** the reproductions below pass and every Phase 1 verification script still passes.
 **Status:** Done
@@ -273,9 +273,9 @@ Linux daemons.
 - Out of scope (Low, accepted): an empty list from a reachable machine whose tmux failed for a moment prunes its
   files (worst case: one missed alert).
 
-**Files:** Modify `bin/lzr1-panel` (`list_rows`, `_select`, `open`, `_notify_one`)
+**Files:** Modify `bin/iroost` (`list_rows`, `_select`, `open`, `_notify_one`)
 
-**Verification:** `zsh -n bin/lzr1-panel`; scratch env as in Phase 1; reproductions: a leftover `seen.lock` whose
+**Verification:** `zsh -n bin/iroost`; scratch env as in Phase 1; reproductions: a leftover `seen.lock` whose
 pid is dead does not delay `_list` (under 0.5 s over the unlocked time); two refreshes writing out of order (older
 snapshot last) give one `done` alert, not two; killing `_list`'s process group right after it computes alerts
 still runs the stub notifier; a tmux session `alert-a/b` gets its ✱ and is pruned when killed; a question
@@ -293,8 +293,8 @@ still runs the stub notifier; a tmux session `alert-a/b` gets its ✱ and is pru
 **Goal:** `profile add` asks only name, target and repositories folder, re-asks a bad name, and every new profile
 lists exactly the sessions inside its repositories folder; `profile edit` and the machine heading's menu edit or
 remove a profile.
-**Scope:** `bin/lzr1-panel` (`profile_help`, `profile_add`, new `profile_edit`, `profile)` command, `_menu`),
-`docs/profiles.md`, `skills/lzr1-panel-profiles/SKILL.md`, `README.md`
+**Scope:** `bin/iroost` (`profile_help`, `profile_add`, new `profile_edit`, `profile)` command, `_menu`),
+`docs/profiles.md`, `skills/iroost-profiles/SKILL.md`, `README.md`
 **Dependencies:** Phase 1
 **Done when:** the guided and flag forms write `root=` and `only=` equal to `repos=`; `my_mac` becomes `my-mac`; an
 invalid or taken name is asked again; `profile edit NAME` changes a profile in place; the heading menu offers edit
@@ -305,7 +305,7 @@ and remove.
 
 - [x] Done
 
-**Context:** `profile_add` (`bin/lzr1-panel`, "profile management") asks, in its guided form, name, target, SSH
+**Context:** `profile_add` (`bin/iroost`, "profile management") asks, in its guided form, name, target, SSH
 host/key/port, the repositories folder (example `~/Github/lerian`), a root folder for non-repository sessions, and
 whether to list only the folder's sessions (`read -q`); the flag form takes `--root` and `--only`. It then validates
 the name once (`[a-z0-9][a-z0-9-]#`, else `die`), refuses an existing name with `die`, writes the file and runs
@@ -322,14 +322,14 @@ the name once (`[a-z0-9][a-z0-9-]#`, else `die`), refuses an existing name with 
 - `profile_help` drops `--root`/`--only` and says a profile lists only the sessions inside `--repos`.
 - Docs: `docs/profiles.md` (what a profile holds, the conversation: questions 4 and 5 go, examples use
   `~/Github/my-repositories`, the "two profiles on one machine" section explains it is now automatic),
-  `skills/lzr1-panel-profiles/SKILL.md` (same), README's Profiles section (examples, the `--only` paragraph).
+  `skills/iroost-profiles/SKILL.md` (same), README's Profiles section (examples, the `--only` paragraph).
 - Edge cases: a name that is only `_` characters becomes dashes and then fails the pattern (asked again); repos
   given with a trailing `/` is written as typed (the list script already strips it from `only`).
 
-**Files:** Modify `bin/lzr1-panel` (`profile_help`, `profile_add`), `docs/profiles.md`,
-`skills/lzr1-panel-profiles/SKILL.md`, `README.md`
+**Files:** Modify `bin/iroost` (`profile_help`, `profile_add`), `docs/profiles.md`,
+`skills/iroost-profiles/SKILL.md`, `README.md`
 
-**Verification:** `zsh -n bin/lzr1-panel`; scratch `LZR1_CONFIG`: `print -l 'bad name' 'my_mac' 1 /tmp | bin/lzr1-panel
+**Verification:** `zsh -n bin/iroost`; scratch `IROOST_CONFIG`: `print -l 'bad name' 'my_mac' 1 /tmp | bin/iroost
 profile add` asks the name twice and writes `my-mac.conf` with `repos=/tmp`, `root=/tmp`, `only=/tmp`; adding
 `my-mac` again (guided) re-asks; `profile add x --local --repos /tmp --root /a` dies with the message above;
 `profile add a_b --local --repos /tmp` writes `a-b.conf`.
@@ -361,13 +361,13 @@ something first moves the viewer (`first_key`, `_select … force`) and then the
 - Edge cases: renaming to an existing name re-asks; editing a profile while its machine is offline still saves and
   reports the failed test; removing the last profile leaves the panel's "no profiles yet" rows.
 
-**Files:** Modify `bin/lzr1-panel` (`profile_help`, new `profile_edit`, `profile)`, `_menu`), `README.md` (menu
+**Files:** Modify `bin/iroost` (`profile_help`, new `profile_edit`, `profile)`, `_menu`), `README.md` (menu
 table: "A machine's heading has a menu too"), `docs/profiles.md` ("Change a profile")
 
-**Verification:** `zsh -n bin/lzr1-panel`; scratch env: `print -l '' '' ~/x | bin/lzr1-panel profile edit t` keeps
+**Verification:** `zsh -n bin/iroost`; scratch env: `print -l '' '' ~/x | bin/iroost profile edit t` keeps
 the name and sets repos/root/only to `~/x` (vared reads stdin when not a tty: if not, drive it with `script` or a
 tmux pane and `send-keys`); a rename `t`→`t2` leaves only `t2.conf`; in a tmux pane running the menu
-(`bin/lzr1-panel _menu 1 t/`), the heading menu lists edit and remove, and remove with `y` deletes `t.conf` and
+(`bin/iroost _menu 1 t/`), the heading menu lists edit and remove, and remove with `y` deletes `t.conf` and
 `seen/t`.
 
 **Done when:** profiles can be edited and removed from the command line and the heading's menu, and removing one
@@ -375,10 +375,10 @@ never leaves the viewer on a session the panel no longer lists.
 
 ### Epic 2.2: Start, run and list opencode sessions
 
-**Goal:** `lzr1-panel start PROFILE opencode NAME` and `lzr1-panel run --opencode` start `opencode --auto` in a new
+**Goal:** `iroost start PROFILE opencode NAME` and `iroost run --opencode` start `opencode --auto` in a new
 tmux session, which survives opencode exiting; the list shows it with model `opencode`, its task, and the right
 working / waiting / idle state, so Phase 1's alerts work for it.
-**Scope:** `bin/lzr1-panel` (`load`, profile commands, `start`, `run`, `LIST_SCRIPT`, alert exclusion)
+**Scope:** `bin/iroost` (`load`, profile commands, `start`, `run`, `LIST_SCRIPT`, alert exclusion)
 **Dependencies:** Epic 2.1 (both touch `profile_add`)
 **Done when:** Tasks 2.2.1-2.2.3 pass; Claude sessions behave exactly as before.
 **Status:** Done
@@ -393,7 +393,7 @@ folder-trust prompt.
 
 - [x] Done
 
-**Context:** `load` (`bin/lzr1-panel`, "profiles" section) reads `KEY=value` lines into `P_*` and defaults
+**Context:** `load` (`bin/iroost`, "profiles" section) reads `KEY=value` lines into `P_*` and defaults
 `P_CLAUDE` to `claude`. `profile_add` finds Claude's path on the machine (`command -v claude ||
 $HOME/.local/bin/claude`) and dies without it; `profile_test` prints one `key=value` line per check and counts any
 line containing `missing` as a failure; `profile_help` documents the options.
@@ -409,9 +409,9 @@ line containing `missing` as a failure; `profile_help` documents the options.
 - Edge cases: an `opencode=` path that no longer exists → `profile test` reports `not installed`; profiles written
   before this change have no key → the default `opencode` from PATH.
 
-**Files:** Modify `bin/lzr1-panel` (`load`, `profile_help`, `profile_test`, `profile_add`)
+**Files:** Modify `bin/iroost` (`load`, `profile_help`, `profile_test`, `profile_add`)
 
-**Verification:** `zsh -n bin/lzr1-panel`; in a scratch `LZR1_CONFIG`: `profile add t --local --repos /tmp` writes
+**Verification:** `zsh -n bin/iroost`; in a scratch `IROOST_CONFIG`: `profile add t --local --repos /tmp` writes
 `opencode=/opt/homebrew/bin/opencode` (on this Mac) and `profile test t` exits 0 with an `opencode:` line; with
 `--opencode /nope` the test still exits 0 and says `not installed`.
 
@@ -424,24 +424,24 @@ or `doctor`.
 
 **Context:** `start)` builds `claude=…` and the resume loop `cmd` (`trap : INT; …; while :; do printf 'Claude
 exited. Enter: …'; read -r a …; $claude --continue; done`), then runs a POSIX sh script on the machine that picks
-the folder (repos/NAME, repos/REPO for `REPO-prN`, else root), runs `tmux new-session`, sets `@lzr1_model`, then
+the folder (repos/NAME, repos/REPO for `REPO-prN`, else root), runs `tmux new-session`, sets `@iroost_model`, then
 waits up to 15 s accepting the folder-trust prompt and catching the Remote Control link. `run)` does the same
 locally and attaches. `LIST_SCRIPT` and Phase 1's alert rule recognise the exited text `Claude exited · Enter
 resumes` exactly.
 
 **Implementation vision:**
 - `start PROFILE opus|sonnet|opencode NAME [args]`. For `opencode`: `oc="${(q)P_OPENCODE} --auto"`;
-  first run `$oc [args] ${LZR1_PROMPT:+--prompt ${(q)LZR1_PROMPT}}`, resume `$oc --continue`; the loop prints
+  first run `$oc [args] ${IROOST_PROMPT:+--prompt ${(q)IROOST_PROMPT}}`, resume `$oc --continue`; the loop prints
   `opencode exited. Enter: resume this conversation · type end + Enter: close the session`.
-- The remote script gets a 6th argument, the agent (`claude|opencode`), and sets `tmux set-option @lzr1_agent
-  opencode` plus `@lzr1_model opencode`. For opencode it skips the trust/Remote Control loop: it checks the
+- The remote script gets a 6th argument, the agent (`claude|opencode`), and sets `tmux set-option @iroost_agent
+  opencode` plus `@iroost_model opencode`. For opencode it skips the trust/Remote Control loop: it checks the
   session is still alive after 2 s (`opencode exited right after start` otherwise) and prints `started`.
   Claude's path is unchanged.
 - `run --opencode [args]`: the binary is `${commands[opencode]:-$HOME/.opencode/bin/opencode}`; `--model` and
   `--effort` are refused with it (`die`). Passthrough (exec plain opencode here) for `-h|--help|-v|--version`, a
   first argument that is an opencode subcommand (`run|session|auth|models|mcp|serve|upgrade|update|stats|…`: match
-  `[a-z]*` that is not a path), no tty, or no tmux. Otherwise the same naming, new-session, `@lzr1_agent` /
-  `@lzr1_model`, `$CLIP`, and attach/switch as Claude's.
+  `[a-z]*` that is not a path), no tty, or no tmux. Otherwise the same naming, new-session, `@iroost_agent` /
+  `@iroost_model`, `$CLIP`, and attach/switch as Claude's.
 - The exited marker becomes agent-neutral: `LIST_SCRIPT` matches `Claude exited|opencode exited`, `waitfor` is
   `<Agent> exited · Enter resumes`, and Phase 1's alert exclusion matches `* exited · Enter resumes`.
 - Usage block and `start` usage message list `opencode`.
@@ -449,11 +449,11 @@ resumes` exactly.
   `opencode exited right after start` (the session is still there, at the resume prompt); a NAME with `.:/|` is
   refused as today.
 
-**Files:** Modify `bin/lzr1-panel` (usage block, `LIST_SCRIPT` exit lines, `list_rows` alert exclusion, `start)`,
+**Files:** Modify `bin/iroost` (usage block, `LIST_SCRIPT` exit lines, `list_rows` alert exclusion, `start)`,
 `run)`)
 
-**Verification:** `zsh -n bin/lzr1-panel`; scratch env with a local test profile: `bin/lzr1-panel start t opencode
-alert-oc` → `started`; `tmux show-options -v -t '=alert-oc:' @lzr1_agent` → `opencode`; the pane shows opencode's
+**Verification:** `zsh -n bin/iroost`; scratch env with a local test profile: `bin/iroost start t opencode
+alert-oc` → `started`; `tmux show-options -v -t '=alert-oc:' @iroost_agent` → `opencode`; the pane shows opencode's
 input box; `tmux send-keys -t '=alert-oc:' C-c` twice, the resume prompt appears; kill `alert-oc`. A Claude
 `start` with a stub claude still runs its old path.
 
@@ -466,26 +466,26 @@ before.
 
 **Context:** `LIST_SCRIPT` reads tmux fields split on `|` (title last), decides `st` from Claude's markers (`esc to
 interrupt` → work; `Enter to select|Do you want to|Would you like to proceed|…exited` → wait), the model from
-`@lzr1_model` or Claude's header, the task from `pane_title`, and the question line for `waitfor`. Spike findings
+`@iroost_model` or Claude's header, the task from `pane_title`, and the question line for `waitfor`. Spike findings
 (opencode 2.0.32 in tmux): working shows `esc interrupt` in its bottom bar; its question tool shows a dialog whose
 first line is the question, then `1. …` options, then `↑↓ select  enter submit  esc dismiss`; idle shows neither;
 `pane_title` is `OpenCode` before any task and `OC | <session title>` after; no permission prompt appeared under
 `--auto`.
 
 **Implementation vision:**
-- Add `#{@lzr1_agent}` to the tmux format before `#{pane_title}` (title must stay last) and read it as `agent`.
+- Add `#{@iroost_agent}` to the tmux format before `#{pane_title}` (title must stay last) and read it as `agent`.
 - `agent=opencode`: `work` if the last 25 lines contain `esc interrupt`; `wait` if they contain `enter submit`,
   `Permission required` or `opencode exited`; else `idle`. `waitfor`: the exited text; else the question, which is
   the last non-empty line before the first line matching `┃[[:space:]]*1\. `, with `┃` and surrounding spaces
   stripped; else `waiting on you`. Title: strip a leading `OC | `; `OpenCode` → empty. No Remote Control grep.
 - Any other agent (empty included) keeps Claude's detection untouched.
 - POSIX sh only (`sed`, `grep -E`, `awk` are fine; no `[[`).
-- Edge cases: a session that is not ours running opencode (no `@lzr1_agent`) is read as Claude and mostly shows
+- Edge cases: a session that is not ours running opencode (no `@iroost_agent`) is read as Claude and mostly shows
   idle, accepted; `Permission required` is unverified on 2.0.32 (kept as best effort, noted in troubleshooting).
 
-**Files:** Modify `bin/lzr1-panel` (`LIST_SCRIPT`)
+**Files:** Modify `bin/iroost` (`LIST_SCRIPT`)
 
-**Verification:** scratch env; fake panes with `@lzr1_agent=opencode` set by hand, printing the captured screens
+**Verification:** scratch env; fake panes with `@iroost_agent=opencode` set by hand, printing the captured screens
 (`esc interrupt` bar; the question dialog; a plain reply) → `_list 1` records `work`, `wait` with waitfor `Do you
 like the tmux poem I wrote into poem.md?`, `idle`; a work → idle change gives one `done` alert (stub notifier).
 Then one real `start t opencode alert-oc2` with a short prompt shows `work` then `idle`; kill it.
@@ -496,7 +496,7 @@ Then one real `start t opencode alert-oc2` with a short prompt shows `work` then
 
 **Goal:** a new opencode session is one key, one footer click or one menu item away in the panel, and one shell
 command away, documented wherever the Claude ones are.
-**Scope:** `bin/lzr1-panel` (`_new`, `_menu`, `_panel`, `keys`, `doctor`), `install.sh`, `README.md`,
+**Scope:** `bin/iroost` (`_new`, `_menu`, `_panel`, `keys`, `doctor`), `install.sh`, `README.md`,
 `docs/troubleshooting.md`
 **Dependencies:** Epic 2.2
 **Done when:** Tasks 2.3.1-2.3.2 pass; `bash -n install.sh` passes on bash 3.2.
@@ -520,9 +520,9 @@ binds `n`/`s` and the footer `[+opus] [+sonnet] [↻] [?]` with `click-footer` m
   `opencode`.
 - `keys`: `c  or [+opencode]  new opencode session (auto-approve on)`.
 
-**Files:** Modify `bin/lzr1-panel` (`_new`, `_menu`, `_panel`, `keys`)
+**Files:** Modify `bin/iroost` (`_new`, `_menu`, `_panel`, `keys`)
 
-**Verification:** `zsh -n bin/lzr1-panel`; `grep` the bindings; in the scratch env, `bin/lzr1-panel _new opencode
+**Verification:** `zsh -n bin/iroost`; `grep` the bindings; in the scratch env, `bin/iroost _new opencode
 1 t/ alert-oc3` (NAME given, so no picker) starts it and `_list 1` lists `alert-oc3` with model `opencode`; kill it.
 
 **Done when:** opencode sessions start from the key, the footer and both menus.
@@ -535,8 +535,8 @@ binds `n`/`s` and the footer `[+opus] [+sonnet] [↻] [?]` with `click-footer` m
 `cl-opus`/`cl-sonnet` (`type … || …`); it must parse on bash 3.2. `doctor` checks tools under "this computer".
 
 **Implementation vision:**
-- Hook: the eval loop also defines `cl-$_p-opencode() { lzr1-panel start $_p opencode "$@"; }`; add
-  `type cl-opencode >/dev/null 2>&1 || cl-opencode() { lzr1-panel run --opencode "$@"; }`, with comments updated.
+- Hook: the eval loop also defines `cl-$_p-opencode() { iroost start $_p opencode "$@"; }`; add
+  `type cl-opencode >/dev/null 2>&1 || cl-opencode() { iroost run --opencode "$@"; }`, with comments updated.
   Existing hooks are rewritten the way the installer already does for its block.
 - Doctor: `✓ opencode <version>` or `· no opencode: opencode sessions unavailable` (hint: `brew install
   sst/tap/opencode` or opencode.ai), never `bad`.
@@ -546,7 +546,7 @@ binds `n`/`s` and the footer `[+opus] [+sonnet] [↻] [?]` with `click-footer` m
   2.0.32's screen; newer versions may change them) and "opencode sessions do not start on a machine" (`profile
   test`).
 
-**Files:** Modify `install.sh`, `bin/lzr1-panel` (`doctor`), `README.md`, `docs/troubleshooting.md`
+**Files:** Modify `install.sh`, `bin/iroost` (`doctor`), `README.md`, `docs/troubleshooting.md`
 
 **Verification:** `bash -n install.sh && /bin/bash -n install.sh` (macOS bash 3.2); extract the generated hook into
 a scratch zsh and bash, source it with a scratch profile, `type cl-opencode cl-t-opencode` defines both; `doctor`
@@ -586,7 +586,7 @@ lists the Claude ones.
   `command -v` on the machine, so a profile with no `opencode=` falls back to `opencode` from that PATH. `profile help`
   also says `--opencode` is optional, and `profile test`'s line says it finds opencode. The verification uses a
   resolved scratch folder, not `/tmp`, and simulates a machine without opencode with a wrapper `sh` whose PATH has no
-  opencode, since `bin/lzr1-panel` puts `/opt/homebrew/bin` on PATH itself.
+  opencode, since `bin/iroost` puts `/opt/homebrew/bin` on PATH itself.
 - Task 2.2.2: `start` and `run` build the session's command with a new `_keep AGENT FIRST RESUME` (in `REPLY`), so
   the resume loop is written once; Claude's command is byte-identical (verify-222 compares `pane_start_command` for
   `start` and, with a stub claude in a scratch `HOME`, for `run`). The 2 s check also counts `opencode exited` on
@@ -597,10 +597,10 @@ lists the Claude ones.
   `run --opencode` line. On the unchanged code, verify-222's `run --opencode` started two Claude sessions named
   after its scratch folder (`unknown option '--opencode'`); they were killed and the script now removes them.
 - Task 2.2.3: opencode rows skip Claude's Remote Control grep and header model lookup (their model is
-  `@lzr1_model`). The question is looked for only when a `┃ 1. ` option line is on screen, so a `?` in an idle reply
+  `@iroost_model`). The question is looked for only when a `┃ 1. ` option line is on screen, so a `?` in an idle reply
   never becomes one. `Permission required` stays unverified on 2.0.32; noting it in `docs/troubleshooting.md` is left
   to Task 2.3.2, which owns the docs. verify-223 reads each record from `$STATE/raw-t`, and also checks the exited
-  screen, an opencode screen in a session without `@lzr1_agent` (read as Claude: idle), that `opencode exited` makes
+  screen, an opencode screen in a session without `@iroost_agent` (read as Claude: idle), that `opencode exited` makes
   no alert, and a question alert carrying the question; its real `start t opencode alert-oc2` went work, then idle,
   with the task title shown without `OC | `.
 - Task 2.3.1: the heading menu's opencode item sits after sonnet (opus, sonnet, opencode, test, edit, remove,
@@ -616,7 +616,7 @@ lists the Claude ones.
   the SSH machine note and the installer's step 6; troubleshooting's "My Claude session is not in the panel" and
   "I closed Claude by accident" mention it too. The session menu's `end` label still says "stop Claude" on opencode
   rows. verify-232 runs the installer's hook section alone under `/bin/bash` with a scratch `HOME` (an old block is
-  replaced, your lines kept), sources the result in zsh and bash 3.2 with a stub `lzr1-panel`, and hides opencode
+  replaced, your lines kept), sources the result in zsh and bash 3.2 with a stub `iroost`, and hides opencode
   from doctor with a copy of the script without `/opt/homebrew/bin` on its PATH.
 - Review fix 1: `profile edit` removes the old profile only after the new file is written, set to 600 and moved into
   place; otherwise it removes the temporary file and dies `profile edit: cannot write …` (verify-mfix makes the
@@ -633,9 +633,9 @@ lists the Claude ones.
   panel lists `run` / `cl-*` sessions only inside a profile's repositories folder; the help prints one more header
   line for it (`sed -n '2,20p'`).
 - Review fix (alerts) 1: when `_tone` picks the bell, `list_rows` rings it to `/dev/tty` from the refresh and starts
-  the detached `_notify` with `LZR1_SOUND=0` (setsid takes its terminal); `lzr1-panel notify` is unchanged.
+  the detached `_notify` with `IROOST_SOUND=0` (setsid takes its terminal); `iroost notify` is unchanged.
   verify-mfix runs a copy with `OSTYPE=linux-gnu` under `script(1)`, with a `setsid` stub that really detaches.
 - Review fix (alerts) 2: the session menu's esc sends a second Escape 0.3 s later when the row's model or the
-  session's `@lzr1_agent` is opencode, and opencode's branch reads `esc again to interrupt` as work.
+  session's `@iroost_agent` is opencode, and opencode's branch reads `esc again to interrupt` as work.
 - Review fix (alerts) 3: Claude's branch waits on `Claude exited` only and opencode's on `opencode exited` only, for
   the state and for `waitfor`; the alert exclusion (`* exited · Enter resumes`) stays.

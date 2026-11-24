@@ -1,4 +1,4 @@
-// lzr1-client.js: the gateway adds this to ttyd's own page, before ttyd's bundle runs (see inject.go).
+// iroost-client.js: the gateway adds this to ttyd's own page, before ttyd's bundle runs (see inject.go).
 // 1. When the terminal's WebSocket closes and the session is gone (logout, idle logout, kill switch), go to the
 //    login form instead of letting ttyd reconnect forever.
 // 2. Copies made in the panel or a session (OSC 52) land on the browser's clipboard; nothing can read it.
@@ -21,7 +21,7 @@
   const WS = window.WebSocket;
   if (WS) {
     const check = n => {
-      fetch('lzr1-client.js', { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' })
+      fetch('iroost-client.js', { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' })
         .then(r => r.status, () => 0)
         .then(s => {
           if (s === 401) location.replace('login');
@@ -112,9 +112,9 @@
   }, true);
 
   // 6. The strip. The panel writes what it listed (and the Pokémon it gave each session) where the gateway reads it
-  // (lzr1-sessions); the sprites it cut are served as lzr1-pokemon/NNNN/<name> (only a short list of names). Nothing
+  // (iroost-sessions); the sprites it cut are served as iroost-pokemon/NNNN/<name> (only a short list of names). Nothing
   // here comes from the page's own origin but the gateway, and everything from the sessions goes in as text. A click
-  // posts the session's key and the panel's id (the last field of its title, id=N) to lzr1-pick; the gateway hands it
+  // posts the session's key and the panel's id (the last field of its title, id=N) to iroost-pick; the gateway hands it
   // to that panel only. Sizes and speeds are the reference mod's: a strip 112 px tall (84 on a phone), a column of
   // 128 px (84) per Pokémon, 70 px/s walking, 32 px/s strolling, asleep after 3 minutes idle.
   const PK = (() => {
@@ -131,28 +131,28 @@
 
     const css = document.createElement('style');
     css.textContent =
-      '.lzr1pk{position:fixed;left:0;right:0;bottom:0;overflow:hidden;user-select:none;-webkit-user-select:none;' +
+      '.iroostpk{position:fixed;left:0;right:0;bottom:0;overflow:hidden;user-select:none;-webkit-user-select:none;' +
       'background:' + BG + ';border-top:.5px solid ' + LINE + ';z-index:2147483000;touch-action:manipulation}' +
-      '.lzr1pk .g{position:absolute;left:0;right:0;height:1px;background:' + LINE + '}' +
-      '.lzr1pk .p{position:absolute;cursor:pointer;transition-property:left;transition-timing-function:linear;' +
+      '.iroostpk .g{position:absolute;left:0;right:0;height:1px;background:' + LINE + '}' +
+      '.iroostpk .p{position:absolute;cursor:pointer;transition-property:left;transition-timing-function:linear;' +
       'transition-duration:0s;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit}' +
-      '.lzr1pk .p:focus-visible{outline:2px solid ' + ACCENT + ';outline-offset:2px}' +
-      '.lzr1pk img{position:absolute;image-rendering:pixelated;max-width:none;pointer-events:none}' +
-      '.lzr1pk .t{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;overflow:hidden;' +
+      '.iroostpk .p:focus-visible{outline:2px solid ' + ACCENT + ';outline-offset:2px}' +
+      '.iroostpk img{position:absolute;image-rendering:pixelated;max-width:none;pointer-events:none}' +
+      '.iroostpk .t{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;overflow:hidden;' +
       'text-overflow:ellipsis;font:10.5px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:' + DIM + '}' +
-      '.lzr1pk .on .t{color:' + INK + '}' +
-      '.lzr1pk .t i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px}' +
-      '.lzr1pk .b{position:absolute;left:50%;transform:translateX(-50%);display:none;white-space:nowrap;' +
+      '.iroostpk .on .t{color:' + INK + '}' +
+      '.iroostpk .t i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px}' +
+      '.iroostpk .b{position:absolute;left:50%;transform:translateX(-50%);display:none;white-space:nowrap;' +
       'font:600 12.5px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#fff;background:' + LINE + ';' +
       'border-radius:7px;padding:1px 7px}' +
-      '.lzr1pk .b.q{display:block;color:#1c1c1e;background:' + ACCENT + ';animation:lzr1pulse .9s ease-in-out infinite alternate}' +
-      '.lzr1pk .b.d{display:block;color:#1c1c1e;background:#30d158}' +
-      '.lzr1pk .b.z{display:block;background:none;color:' + DIM + ';font-weight:500}' +
-      '.lzr1pk .ball{position:absolute;left:50%;margin-left:-9px;bottom:0;width:18px;height:18px;border-radius:50%;' +
+      '.iroostpk .b.q{display:block;color:#1c1c1e;background:' + ACCENT + ';animation:iroostpulse .9s ease-in-out infinite alternate}' +
+      '.iroostpk .b.d{display:block;color:#1c1c1e;background:#30d158}' +
+      '.iroostpk .b.z{display:block;background:none;color:' + DIM + ';font-weight:500}' +
+      '.iroostpk .ball{position:absolute;left:50%;margin-left:-9px;bottom:0;width:18px;height:18px;border-radius:50%;' +
       'border:1.5px solid ' + INK + ';box-sizing:border-box;background:linear-gradient(#e3350d 50%,#f4f4f4 50%);' +
-      'animation:lzr1pulse .9s ease-in-out infinite alternate}' +
-      '@keyframes lzr1pulse{from{opacity:.6}to{opacity:1}}' +
-      '@media (prefers-reduced-motion:reduce){.lzr1pk .b.q,.lzr1pk .ball{animation:none}}';
+      'animation:iroostpulse .9s ease-in-out infinite alternate}' +
+      '@keyframes iroostpulse{from{opacity:.6}to{opacity:1}}' +
+      '@media (prefers-reduced-motion:reduce){.iroostpk .b.q,.iroostpk .ball{animation:none}}';
 
     const mk = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
     const dexOf = v => (Number.isInteger(v) && v >= 1 && v <= 151) ? ('000' + v).slice(-4) : '';
@@ -161,7 +161,7 @@
     const ensureStrip = () => {
       if (strip || !document.body) return;
       document.head.appendChild(css);
-      strip = mk('div', 'lzr1pk');
+      strip = mk('div', 'iroostpk');
       strip.style.height = H + 'px';
       strip.style.display = 'none';
       const g = mk('div', 'g'); g.style.bottom = GROUND + 'px';
@@ -192,7 +192,7 @@
       if (m === 'wait' || (m && m.retry && m.retry > now)) return null;
       if (m && m.walkR) return m;
       metas.set(dex, 'wait');
-      fetch('lzr1-pokemon/' + dex + '/meta.json', { credentials: 'same-origin' })
+      fetch('iroost-pokemon/' + dex + '/meta.json', { credentials: 'same-origin' })
         .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
         .then(j => metas.set(dex, j && j.walkR ? j : { retry: Date.now() + 60000 }))
         .catch(() => metas.set(dex, { retry: Date.now() + 60000 })); // not cut yet: ask again in a minute
@@ -246,7 +246,7 @@
 
     const pick = key => {
       if (!panelId) return;
-      fetch('lzr1-pick', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      fetch('iroost-pick', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: panelId, key }) }).catch(() => {});
       selected = key; mark(); // the panel's title says so too once the viewer has moved
     };
@@ -263,7 +263,7 @@
       it.shot = shot;
       // Pokémon whose walk frame is taller than 64 px (before doubling) are drawn at half size.
       const sc = SCALE * (meta.walkR.h / 2 > 64 ? 0.5 : 1);
-      it.img.src = 'lzr1-pokemon/' + it.dex + '/' + g + '.gif';
+      it.img.src = 'iroost-pokemon/' + it.dex + '/' + g + '.gif';
       it.img.style.display = 'block';
       it.img.style.width = gm.w * sc + 'px'; it.img.style.height = gm.h * sc + 'px';
       // The visible box: feet on the ground, body in the middle of the column.
@@ -310,7 +310,7 @@
 
     const fetchSessions = () => {
       if (document.hidden) return;
-      fetch('lzr1-sessions', { cache: 'no-store', credentials: 'same-origin' })
+      fetch('iroost-sessions', { cache: 'no-store', credentials: 'same-origin' })
         .then(r => r.ok ? r.json() : null)
         .then(j => {
           if (!j || !Array.isArray(j.sessions)) return;
@@ -324,13 +324,13 @@
 
     titleHooks.push(t => {
       const f = String(t || '').split('|');
-      if (f[0] !== 'lzr1') return;
+      if (f[0] !== 'iroost') return;
       const idf = f.find(x => /^id=[0-9]{1,10}$/.test(x));
       if (idf) panelId = idf.slice(3);
       selected = (f[1] === 'view' || f[1] === 'wide') ? (f[2] || '') : '';
       mark();
       // ttyd shows the terminal's title as the page's: a desktop tab keeps its own.
-      if (!COARSE) setTimeout(() => { document.title = baseTitle || 'lzr1'; }, 0);
+      if (!COARSE) setTimeout(() => { document.title = baseTitle || 'iroost'; }, 0);
     });
 
     const start = () => {
@@ -351,10 +351,10 @@
 
   // 5. A phone: native navigation around the terminal, top to bottom: a slim header while a session shows (back, its
   // state, its name), the terminal, a key bar with the keys a phone keyboard lacks (Esc, Tab, Ctrl-C, arrows), and tabs
-  // for Sessions, Pull requests and Remote. The panel's title says what shows (lzr1|list or lzr1|view|KEY|STATE: _fit
-  // and remote_view in bin/lzr1-panel); the tabs drive the panel with keys it binds for them (alt-s: the top of the
+  // for Sessions, Pull requests and Remote. The panel's title says what shows (iroost|list or iroost|view|KEY|STATE: _fit
+  // and remote_view in bin/iroost); the tabs drive the panel with keys it binds for them (alt-s: the top of the
   // list, alt-p: the pull requests), leaving a session first as back does (Ctrl-b d). Remote is a page of its own, read
-  // from the gateway (lzr1-status): nothing on it changes the remote but Log out. Every key acts on pointerdown with the
+  // from the gateway (iroost-status): nothing on it changes the remote but Log out. Every key acts on pointerdown with the
   // default prevented, so the focus, and the on-screen keyboard with it, stays where it was. A swipe over the terminal
   // scrolls it (as wheel events: a phone sends none, and the panel and tmux scroll on them). The on-screen keyboard
   // opens only on a tap inside a session: never in the list, the pull requests or Remote, and not on opening a session.
@@ -546,7 +546,7 @@
       layout();
       if (!on) return;
       page.replaceChildren(el('div', { font: '600 28px ' + UI, margin: '8px 0 16px' }, 'Remote'), el('div', { color: DIM }, 'Loading…'));
-      fetch('lzr1-status', { cache: 'no-store', credentials: 'same-origin' })
+      fetch('iroost-status', { cache: 'no-store', credentials: 'same-origin' })
         .then(r => (r.status === 401 ? location.replace('login') : r.json()))
         .then(st => {
           if (!st) return;
@@ -584,7 +584,7 @@
     const STATES = { work: '▶', wait: '⧗', idle: '·' };
     titleHooks.push(title => {
       const f = String(title || '').split('|');
-      if (f[0] !== 'lzr1') return;
+      if (f[0] !== 'iroost') return;
       const was = view.list ? '' : view.key;
       view = f[1] === 'view' ? { list: false, key: f[2] || '', state: f[3] || '' } : { list: true, key: '', state: '' };
       if (view.list || view.key !== was) closeKeyboard(); // a session just opened: the keyboard waits for a tap

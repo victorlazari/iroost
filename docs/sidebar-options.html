@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lzr1 Sidebar Options</title>
+<title>iroost Sidebar Options</title>
 <!-- Template: ring:visualizing standard.html -->
-<!-- Artifact brief: Audience: the user choosing a wider, more informative left sidebar for lzr1-panel. Physical scene: the panel as it sits in Ghostty, sidebar on the left, viewer on the right. Source facts: profiles group sessions (oracle-sessions over SSH, macbook-pro-sessions local); today each row shows state glyph, name, age, attached mark; tmux can also give each session's pane title (Claude sets it to its current task), folder, creation time, last activity and viewer count; git gives the branch and changed files; the model can be stored when lzr1-panel starts a session; the Remote Control link is already stored. Entities: profiles, sessions, the three layouts. Hierarchy: the three mockups first, the data-source table second. Message: pick A, B or C. Non-invention boundary: session details are sample values, labeled; only fields obtainable from tmux, git or lzr1-panel itself appear. -->
+<!-- Artifact brief: Audience: the user choosing a wider, more informative left sidebar for iroost. Physical scene: the panel as it sits in Ghostty, sidebar on the left, viewer on the right. Source facts: profiles group sessions (oracle-sessions over SSH, macbook-pro-sessions local); today each row shows state glyph, name, age, attached mark; tmux can also give each session's pane title (Claude sets it to its current task), folder, creation time, last activity and viewer count; git gives the branch and changed files; the model can be stored when iroost starts a session; the Remote Control link is already stored. Entities: profiles, sessions, the three layouts. Hierarchy: the three mockups first, the data-source table second. Message: pick A, B or C. Non-invention boundary: session details are sample values, labeled; only fields obtainable from tmux, git or iroost itself appear. -->
 <!-- Visual thesis: three terminals side by side, same sessions, different density; click any row to see how selection reads. -->
-<!-- Design choices: 1) identical sample sessions across A, B and C so only the layout differs; 2) each mockup at its real character width, so the space it takes from the viewer is honest; 3) a data-source table ties every shown field to tmux, git or lzr1-panel. -->
+<!-- Design choices: 1) identical sample sessions across A, B and C so only the layout differs; 2) each mockup at its real character width, so the space it takes from the viewer is honest; 3) a data-source table ties every shown field to tmux, git or iroost. -->
 <!-- ============================================
      LERIAN STANDARD TEMPLATE v1.0.0
      Source: Lerian product-console design system
@@ -507,8 +507,8 @@ table.src td code{font-family:var(--alf-font-mono);font-size:12px;background:var
 
 
 <section class="animate" style="--i:0">
-<h1>lzr1 sidebar: three wider layouts</h1>
-<p class="sub">Each layout shows the same sessions with more information, and takes more width from the viewer (shown faded on the right, at its real character width). Layout A, cards, is the one lzr1-panel uses (chosen on 27 Oct 2026). Click any session row to see how the selection reads. The session details are <b>sample values</b>; the table at the end shows where each field would come from.</p>
+<h1>iroost sidebar: three wider layouts</h1>
+<p class="sub">Each layout shows the same sessions with more information, and takes more width from the viewer (shown faded on the right, at its real character width). Layout A, cards, is the one iroost uses (chosen on 27 Oct 2026). Click any session row to see how the selection reads. The session details are <b>sample values</b>; the table at the end shows where each field would come from.</p>
 </section>
 <div class="opts" id="opts"></div>
 <section class="animate" style="--i:4;margin-top:34px">
@@ -518,7 +518,7 @@ table.src td code{font-family:var(--alf-font-mono);font-size:12px;background:var
 <tbody>
 <tr><td>State ▶ ⧗ ·, name, age, attached ●</td><td>what the panel shows today</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
 <tr><td>Task title</td><td>Claude names each conversation and sets it as the terminal title: tmux <code>#{pane_title}</code></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-<tr><td>Model (opus / sonnet)</td><td>stored on the session when lzr1-panel starts it; a session started some other way shows —</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+<tr><td>Model (opus / sonnet)</td><td>stored on the session when iroost starts it; a session started some other way shows —</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
 <tr><td>Branch, changed files</td><td><code>git branch</code> and <code>git status</code> in the session's folder (tmux <code>#{pane_current_path}</code>)</td><td class="yes">branch</td><td class="yes">branch</td><td class="yes">both</td></tr>
 <tr><td>Folder</td><td>tmux <code>#{pane_current_path}</code></td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td></tr>
 <tr><td>What it is waiting for</td><td>the question or approval on Claude's screen</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td></tr>
@@ -561,7 +561,7 @@ var P=[{n:"oracle-sessions",kind:"ssh",s:[
  {n:"erebor",st:"i",m:"sonnet",age:"2h",att:0,task:"Review the tmux layer",br:"main",ch:0,dir:"~/lerian/repositories/erebor",start:"19:51",last:"1h",rc:"claude.ai/code/session_01…qKt"}]},
  {n:"macbook-pro-sessions",kind:"local",s:[
  {n:"midaz",st:"q",m:"opus",age:"4m",att:0,task:"Fee rules for the ledger",br:"feat/fees",ch:7,dir:"~/Github/lerian/midaz",start:"21:52",last:"40s",wait:"approve: run make test?",rc:"claude.ai/code/session_01…Zp2"},
- {n:"lzr1-panel",st:"i",m:"sonnet",age:"35m",att:0,task:"Sidebar templates",br:"main",ch:1,dir:"~/Github/lerian/lzr1-panel",start:"21:21",last:"9m",rc:"claude.ai/code/session_01…Lw8"}]}];
+ {n:"iroost",st:"i",m:"sonnet",age:"35m",att:0,task:"Sidebar templates",br:"main",ch:1,dir:"~/Github/lerian/iroost",start:"21:21",last:"9m",rc:"claude.ai/code/session_01…Lw8"}]}];
 var G={w:'<span class="w">▶</span>',q:'<span class="q">⧗</span>',i:'<span class="i">·</span>'};
 function pad(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+"…":s+" ".repeat(n-s.length)}
 function rpad(s,n){s=String(s);return s.length>=n?s:" ".repeat(n-s.length)+s}
@@ -572,7 +572,7 @@ function sum(){var a=all(),w=0,q=0,i=0;a.forEach(function(s){s.st=="w"?w++:s.st=
 function rule(w,label){var l=" "+label+" ",n=w-l.length,a=n>>1;return '<span class="d">'+"─".repeat(a)+'</span><span class="h">'+l+'</span><span class="d">'+"─".repeat(n-a)+"</span>"}
 function row(k,s,html){return '<span class="row'+(sel[k]==s.n?' sel':'')+'" data-k="'+k+'" data-n="'+s.n+'">'+html+"</span>"}
 function ptr(k,s){return sel[k]==s.n?'<span class="ptr">▌</span>':' '}
-function A(){var w=W.A,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"lzr1")+"\n";
+function A(){var w=W.A,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"iroost")+"\n";
  P.forEach(function(p){o+='\n <span class="h">'+p.n+'</span> <span class="d">'+p.kind+' · <span class="ok">online</span> · '+p.s.length+"</span>\n";
   p.s.forEach(function(s){var right=s.m+" · "+s.age+(s.att?" ●":"  ");
    var l1=ptr("A",s)+" "+G[s.st]+" "+'<span class="t">'+pad(s.n,w-6-right.length)+'</span><span class="bdg">'+e(s.m)+'</span><span class="d"> · '+s.age+"</span>"+(s.att?' <span class="ok">●</span>':"  ");
@@ -580,12 +580,12 @@ function A(){var w=W.A,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"lzr1")
    var l3=ptr("A",s)+"   "+'<span class="d">'+e(pad("⎇ "+s.br+(s.ch?" +"+s.ch:"")+" · "+s.dir.replace(/^.*\//,""),w-5))+"</span>";
    o+=row("A",s,l1+"\n"+l2+"\n"+l3)+"\n"})});
  return o+"\n"+'<span class="d">'+"─".repeat(w)+'</span>\n <span class="q">[+opus] [+sonnet] [↻] [?]</span>'}
-function B(){var w=W.B,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"lzr1")+"\n";
+function B(){var w=W.B,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"iroost")+"\n";
  o+='<span class="d">   '+pad("SESSION",17)+pad("TASK",25)+pad("MODEL",7)+pad("BRANCH",15)+rpad("AGE",5)+"  </span>\n";
  P.forEach(function(p){o+=' <span class="h">'+p.n+'</span> <span class="d">'+p.kind+" · "+p.s.length+"</span>\n";
   p.s.forEach(function(s){o+=row("B",s,ptr("B",s)+G[s.st]+" "+'<span class="t">'+pad(s.n,17)+'</span><span class="'+(s.wait?"q":"m")+'">'+e(pad(s.wait||s.task,24))+' </span><span class="bdg">'+pad(s.m,7)+'</span><span class="d">'+e(pad(s.br,15))+rpad(s.age,5)+"</span>"+(s.att?' <span class="ok">●</span>':"  "))+"\n"})});
  return o+"\n"+'<span class="d">'+"─".repeat(w)+'</span>\n <span class="q">[+opus] [+sonnet] [↻] [?]</span>'}
-function C(){var w=W.C,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"lzr1")+"\n",cur=null;
+function C(){var w=W.C,o=" "+'<span class="m">'+sum()+"</span>\n"+rule(w,"iroost")+"\n",cur=null;
  P.forEach(function(p){o+=' <span class="h">'+p.n+'</span> <span class="d">'+p.kind+" · "+p.s.length+"</span>\n";
   p.s.forEach(function(s){if(sel.C==s.n)cur=s;var r=s.m+" "+rpad(s.age,4)+(s.att?" ●":"  ");
    o+=row("C",s,ptr("C",s)+" "+G[s.st]+" "+'<span class="t">'+pad(s.n,w-5-r.length)+'</span><span class="bdg">'+s.m+'</span><span class="d"> '+rpad(s.age,4)+"</span>"+(s.att?' <span class="ok">●</span>':"  "))+"\n"})});

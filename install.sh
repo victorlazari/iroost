@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lzr1-panel installer, for macOS and Linux. Safe to run again: every step checks before it changes anything.
+# iroost installer, for macOS and Linux. Safe to run again: every step checks before it changes anything.
 #
 #   ./install.sh              install and configure everything, asking before anything big
 #   ./install.sh --yes        same, answering yes (Claude Code and Ghostty installs included)
@@ -7,16 +7,16 @@
 #   ./install.sh --uninstall  remove the links, the shell hook and the Claude skill (profiles stay)
 #
 # What it sets up: zsh, tmux, fzf (0.74+), curl, openssl, git, gh and jq; ttyd and Go if you want the panel in a browser;
-# Claude Code if it is missing; Ghostty on macOS if you want it; the lzr1-panel command in ~/.local/bin; the Claude
+# Claude Code if it is missing; Ghostty on macOS if you want it; the iroost command in ~/.local/bin; the Claude
 # Code skill that creates profiles; a shell hook with cl-* helpers and (optionally) the panel opening with Ghostty;
 # Ctrl+C copying in Ghostty; ImageMagick (the Pokémon sprites) and terminal-notifier (alerts) on request; GitHub sign-in;
 # your first profile, with a name and a repositories folder it suggests (Enter, Enter) and an offer to add more
-# machines over SSH; then lzr1-panel doctor checks it all.
+# machines over SSH; then iroost doctor checks it all.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BIN=$HOME/.local/bin
-CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/lzr1-panel
+CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/iroost
 SKILLS=$HOME/.claude/skills
 FZF_MIN=0.74
 # Tools installed below land in ~/.local/bin, which a fresh account often has off PATH: make them visible to this run.
@@ -42,32 +42,60 @@ ask()  { [[ $YES == 1 ]] && return 0; local r; read -r -p "  $1 [Y/n] " r </dev/
 have() { command -v "$1" >/dev/null 2>&1; }
 
 OS=$(uname -s)
-HOOK_BEGIN='# >>> lzr1-panel >>>'
-HOOK_END='# <<< lzr1-panel <<<'
+HOOK_BEGIN='# >>> iroost >>>'
+HOOK_END='# <<< iroost <<<'
 
+# remove_hook RCFILE [BEGIN END]: the managed block between the markers (this version's by default)
 remove_hook() {
-  local rc=$1
-  [[ -f $rc ]] && grep -qF "$HOOK_BEGIN" "$rc" || return 0
+  local rc=$1 b=${2:-$HOOK_BEGIN} e=${3:-$HOOK_END}
+  [[ -f $rc ]] && grep -qF "$b" "$rc" || return 0
   local tmp; tmp=$(mktemp)
-  awk -v b="$HOOK_BEGIN" -v e="$HOOK_END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$rc" >"$tmp" && cat "$tmp" >"$rc" && rm -f "$tmp"
+  awk -v b="$b" -v e="$e" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$rc" >"$tmp" && cat "$tmp" >"$rc" && rm -f "$tmp"
 }
 
+# migrate_from_lzr1_panel: iroost was called lzr1-panel. Move what a person has built (profiles, layout, remote settings,
+# cached state) to the new names, and drop the old command link, skill link and shell hook. Nothing is deleted that has not
+# been moved or replaced; a run on an account that never had the old name does nothing.
+migrate_from_lzr1_panel() {
+  local cfg=${XDG_CONFIG_HOME:-$HOME/.config} cache=${XDG_CACHE_HOME:-$HOME/.cache} moved=0 old new rc
+  for pair in "$cfg/lzr1-panel:$CONFIG" "$cache/lzr1-panel:$cache/iroost" "$cache/lzr1-panel-viewer:$cache/iroost-viewer"; do
+    old=${pair%%:*} new=${pair#*:}
+    [[ -d $old ]] || continue
+    if [[ -e $new ]]; then warn "left $old: $new already exists (merge by hand, then delete it)"; continue; fi
+    mkdir -p "$(dirname "$new")" && mv "$old" "$new" && ok "moved $old → $new" && moved=1
+  done
+  for old in "$BIN/lzr1-panel" "$SKILLS/lzr1-panel-profiles"; do
+    [[ -L $old ]] && rm -f "$old" && ok "removed the old link $old" && moved=1
+  done
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    grep -qsF '# >>> lzr1-panel >>>' "$rc" || continue
+    remove_hook "$rc" '# >>> lzr1-panel >>>' '# <<< lzr1-panel <<<' && ok "removed the old shell hook from $rc" && moved=1
+  done
+  if grep -qs 'lzr1-panel/install.sh' "$GCONF_FILE"; then
+    sed -i.bak 's#Added by lzr1-panel/install.sh#Added by iroost/install.sh#' "$GCONF_FILE" && rm -f "$GCONF_FILE.bak"
+  fi
+  [[ $moved == 1 ]] && info "your own shell files may still say lzr1-panel or LZR1_*: they are now iroost and IROOST_* (see README, Moving from lzr1-panel)"
+  return 0
+}
+
+GCONF_FILE="$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
+
 if [[ $UNINSTALL == 1 ]]; then
-  step "Uninstalling lzr1-panel"
-  rm -f "$BIN/lzr1-panel" && ok "removed $BIN/lzr1-panel"
-  rm -f "$SKILLS/lzr1-panel-profiles" && ok "removed the Claude skill link"
+  step "Uninstalling iroost"
+  rm -f "$BIN/iroost" && ok "removed $BIN/iroost"
+  rm -f "$SKILLS/iroost-profiles" && ok "removed the Claude skill link"
   for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do remove_hook "$rc"; done
   ok "removed the shell hook"
   GCONF="$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
-  if grep -qs 'lzr1-panel/install.sh' "$GCONF"; then
-    grep -v -e 'Added by lzr1-panel/install.sh' -e '^keybind = performable:ctrl+c=copy_to_clipboard$' "$GCONF" >"$GCONF.tmp" || true
+  if grep -qs -e 'iroost/install.sh' -e 'lzr1-panel/install.sh' "$GCONF"; then
+    grep -v -e 'Added by iroost/install.sh' -e 'Added by lzr1-panel/install.sh' -e '^keybind = performable:ctrl+c=copy_to_clipboard$' "$GCONF" >"$GCONF.tmp" || true
     mv "$GCONF.tmp" "$GCONF" && ok "removed the Ghostty Ctrl+C copy key"
   fi
   info "profiles kept in $CONFIG (delete that folder to remove them)"
   exit 0
 fi
 
-printf '%s\n' "${c_bold}lzr1-panel installer${c_off} ${c_dim}($OS, from $REPO)${c_off}"
+printf '%s\n' "${c_bold}iroost installer${c_off} ${c_dim}($OS, from $REPO)${c_off}"
 
 # ---- packages -------------------------------------------------------------------------------------------------------
 
@@ -138,7 +166,7 @@ if [[ $OS == Darwin ]]; then
   elif ask "Install Ghostty (the panel opens as a split there; without it, it uses a tmux layout)?"; then
     brew install --cask ghostty && ok "Ghostty installed"
   else
-    info "skipped: lzr1-panel will use its tmux layout"
+    info "skipped: iroost will use its tmux layout"
   fi
   # Ghostty reads this file as well as ~/.config/ghostty; "performable" passes Ctrl+C on when nothing is selected.
   GCONF="$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
@@ -148,18 +176,18 @@ if [[ $OS == Darwin ]]; then
       ok "Ghostty: Ctrl+C copies selected text"
     elif ask "Let Ctrl+C copy selected text in Ghostty (with nothing selected it still stops Claude)?"; then
       mkdir -p "$(dirname "$GCONF")"
-      printf '\n# Added by lzr1-panel/install.sh: Ctrl+C copies a selection, and is Ctrl+C otherwise.\n%s\n' "$GBIND" >>"$GCONF"
+      printf '\n# Added by iroost/install.sh: Ctrl+C copies a selection, and is Ctrl+C otherwise.\n%s\n' "$GBIND" >>"$GCONF"
       ok "Ghostty: Ctrl+C copies selected text (reload Ghostty's config, Cmd+Shift+,)"
     fi
   fi
 fi
 
-# lzr1-panel remote (the panel in a browser on your tailnet) needs ttyd, Go (to build its gateway) and Tailscale; the
+# iroost remote (the panel in a browser on your tailnet) needs ttyd, Go (to build its gateway) and Tailscale; the
 # panel works without them. Tailscale is a system VPN app: never installed from here. remote is set when they were
 # there or the answer was yes: the gateway is built only then (a built gateway counts as a set-up remote in doctor).
 remote=
 if have ttyd && have go; then ok "ttyd and Go"; remote=1
-elif ask "Install ttyd and Go for lzr1-panel remote (the panel in a browser on your tailnet)?"; then
+elif ask "Install ttyd and Go for iroost remote (the panel in a browser on your tailnet)?"; then
   remote=1
   for t in ttyd go; do
     have "$t" && { ok "$t"; continue; }
@@ -169,13 +197,13 @@ elif ask "Install ttyd and Go for lzr1-panel remote (the panel in a browser on y
     fi
     info "installing $pkg"
     if ( pkg_install "$pkg" ) >/dev/null 2>&1; then hash -r; ok "$t installed"
-    else warn "could not install $pkg: lzr1-panel remote needs it"; fi
+    else warn "could not install $pkg: iroost remote needs it"; fi
   done
 else
-  info "skipped: lzr1-panel remote needs ttyd and Go"
+  info "skipped: iroost remote needs ttyd and Go"
 fi
 have tailscale || [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]] ||
-  info "no Tailscale: lzr1-panel remote also needs it (https://tailscale.com/download)"
+  info "no Tailscale: iroost remote also needs it (https://tailscale.com/download)"
 
 # The Pokémon theme (sprites beside each session, and the strip in a browser; on by default) cuts the art with curl and
 # ImageMagick, through brew on macOS. Declining leaves text tags.
@@ -200,33 +228,34 @@ if [[ $OS == Darwin ]]; then
   fi
 fi
 
-# ---- lzr1-panel itself ----------------------------------------------------------------------------------------------
+# ---- iroost itself ----------------------------------------------------------------------------------------------
 
-step "Installing lzr1-panel"
-chmod +x "$REPO/bin/lzr1-panel"
+step "Installing iroost"
+migrate_from_lzr1_panel
+chmod +x "$REPO/bin/iroost"
 mkdir -p "$BIN" "$CONFIG/profiles"
 chmod 700 "$CONFIG" "$CONFIG/profiles"
-ln -sfn "$REPO/bin/lzr1-panel" "$BIN/lzr1-panel"
-ok "$BIN/lzr1-panel → $REPO/bin/lzr1-panel"
+ln -sfn "$REPO/bin/iroost" "$BIN/iroost"
+ok "$BIN/iroost → $REPO/bin/iroost"
 case ":$PATH:" in *":$BIN:"*) ;; *) warn "$BIN is not on your PATH yet: the shell hook below adds it" ;; esac
 
-# lzr1-panel remote's login gateway (gateway/, Go standard library only); remote on builds it too when missing.
+# iroost remote's login gateway (gateway/, Go standard library only); remote on builds it too when missing.
 if [[ -z $remote ]]; then :  # declined above
 elif have go; then
   # On failure, go's own last line (a Go too old says so), not the "could not build" that follows it.
-  if out=$("$REPO/bin/lzr1-panel" remote build 2>&1); then ok "remote gateway built (go build)"
+  if out=$("$REPO/bin/iroost" remote build 2>&1); then ok "remote gateway built (go build)"
   else
-    last=$(printf '%s\n' "$out" | grep -v -e '^lzr1-panel: ' -e '^building the gateway' | tail -1 || true)
+    last=$(printf '%s\n' "$out" | grep -v -e '^iroost: ' -e '^building the gateway' | tail -1 || true)
     warn "could not build the remote gateway: ${last:-${out##*$'\n'}} (cd $REPO/gateway && go build .)"
   fi
 else
-  info "no Go: lzr1-panel remote builds its gateway with it (brew install go, or your distribution's golang)"
+  info "no Go: iroost remote builds its gateway with it (brew install go, or your distribution's golang)"
 fi
 
 if [[ -d $HOME/.claude ]] || have claude; then
   mkdir -p "$SKILLS"
-  ln -sfn "$REPO/skills/lzr1-panel-profiles" "$SKILLS/lzr1-panel-profiles"
-  ok "Claude Code skill: ask Claude to \"create a new lzr1-panel profile\""
+  ln -sfn "$REPO/skills/iroost-profiles" "$SKILLS/iroost-profiles"
+  ok "Claude Code skill: ask Claude to \"create a new iroost profile\""
 fi
 
 # ---- shell hook -----------------------------------------------------------------------------------------------------
@@ -240,26 +269,26 @@ if [[ $SHELL_HOOK == 1 ]]; then
     remove_hook "$rc"
     {
       echo "$HOOK_BEGIN"
-      echo "# Managed by lzr1-panel/install.sh; ./install.sh --uninstall removes it."
+      echo "# Managed by iroost/install.sh; ./install.sh --uninstall removes it."
       echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac'
       echo "# cl-<profile>-opus / -sonnet / -agy / -opencode NAME: start a session on a profile without opening the panel"
-      echo 'for _p in ${XDG_CONFIG_HOME:-$HOME/.config}/lzr1-panel/profiles/*.conf; do'
+      echo 'for _p in ${XDG_CONFIG_HOME:-$HOME/.config}/iroost/profiles/*.conf; do'
       echo '  [ -e "$_p" ] || continue; _p=${_p##*/}; _p=${_p%.conf}'
-      echo '  eval "cl-$_p-opus() { lzr1-panel start $_p opus \"\$@\"; }; cl-$_p-sonnet() { lzr1-panel start $_p sonnet \"\$@\"; }"'
-      echo '  eval "cl-$_p-agy() { lzr1-panel start $_p agy \"\$@\"; }; cl-$_p-opencode() { lzr1-panel start $_p opencode \"\$@\"; }"'
+      echo '  eval "cl-$_p-opus() { iroost start $_p opus \"\$@\"; }; cl-$_p-sonnet() { iroost start $_p sonnet \"\$@\"; }"'
+      echo '  eval "cl-$_p-agy() { iroost start $_p agy \"\$@\"; }; cl-$_p-opencode() { iroost start $_p opencode \"\$@\"; }"'
       echo 'done; unset _p'
       echo "# cl-opus / cl-sonnet [claude args], cl-agy [agy args], cl-opencode [opencode args]: Claude, agy or opencode in a"
       echo "# new tmux session in this folder; the panel lists it inside a profile's repositories folder. Your own,"
       echo "# defined earlier in this file, wins."
-      echo 'type cl-opus >/dev/null 2>&1 || function cl-opus { lzr1-panel run --model opus "$@"; }'
-      echo 'type cl-sonnet >/dev/null 2>&1 || function cl-sonnet { lzr1-panel run --model sonnet "$@"; }'
-      echo 'type cl-agy >/dev/null 2>&1 || function cl-agy { lzr1-panel run --agy "$@"; }'
-      echo 'type cl-opencode >/dev/null 2>&1 || function cl-opencode { lzr1-panel run --opencode "$@"; }'
+      echo 'type cl-opus >/dev/null 2>&1 || function cl-opus { iroost run --model opus "$@"; }'
+      echo 'type cl-sonnet >/dev/null 2>&1 || function cl-sonnet { iroost run --model sonnet "$@"; }'
+      echo 'type cl-agy >/dev/null 2>&1 || function cl-agy { iroost run --agy "$@"; }'
+      echo 'type cl-opencode >/dev/null 2>&1 || function cl-opencode { iroost run --opencode "$@"; }'
       if [[ $autoopen == 1 && $rc == "$HOME/.zshrc" ]]; then
-        echo "# Opens the panel in the first Ghostty shell; LZR1_PANEL=0 (in ~/.zshenv) turns it off."
-        echo 'if [[ -o interactive && $TERM_PROGRAM == ghostty && ${LZR1_PANEL:-1} == 1 && -z $TMUX ]] &&'
-        echo '   ! pgrep -f "lzr1-panel _panel" >/dev/null; then'
-        echo '  lzr1-panel open'
+        echo "# Opens the panel in the first Ghostty shell; IROOST_PANEL=0 (in ~/.zshenv) turns it off."
+        echo 'if [[ -o interactive && $TERM_PROGRAM == ghostty && ${IROOST_PANEL:-1} == 1 && -z $TMUX ]] &&'
+        echo '   ! pgrep -f "iroost _panel" >/dev/null; then'
+        echo '  iroost open'
         echo 'fi'
       fi
       echo "$HOOK_END"
@@ -305,28 +334,28 @@ first_profile() {
   fi
   repos=${repos/#\~/$HOME}
   if [[ -z $repos ]]; then
-    info "no repositories folder found: run 'lzr1-panel profile add' when you know it (it asks, with suggestions)"
+    info "no repositories folder found: run 'iroost profile add' when you know it (it asks, with suggestions)"
     return 0
   fi
-  if "$BIN/lzr1-panel" profile add "$name" --local --repos "$repos"; then
+  if "$BIN/iroost" profile add "$name" --local --repos "$repos"; then
     ok "profile $name created (this computer)"
   else
-    warn "profile not created: run 'lzr1-panel profile add' later (it asks, with suggestions)"
+    warn "profile not created: run 'iroost profile add' later (it asks, with suggestions)"
   fi
 }
 step "Profiles"
 if compgen -G "$CONFIG/profiles/*.conf" >/dev/null; then
-  "$BIN/lzr1-panel" profile list | sed 's/^/  /'
+  "$BIN/iroost" profile list | sed 's/^/  /'
 elif [[ -t 0 || $YES == 1 ]] && ask "Create your first profile now (this computer)?"; then
   first_profile
 else
-  info "none yet: run 'lzr1-panel profile add' (it asks, with suggestions), or ask Claude to create a new lzr1-panel profile"
+  info "none yet: run 'iroost profile add' (it asks, with suggestions), or ask Claude to create a new iroost profile"
 fi
 # More machines are the same: a server over SSH takes a user@host and, if you use one, a key.
 if [[ -t 0 && $YES == 0 ]] && compgen -G "$CONFIG/profiles/*.conf" >/dev/null &&
    ask_no "Add another machine (a server over SSH) now?"; then
   while :; do
-    "$BIN/lzr1-panel" profile add || warn "profile not created: run 'lzr1-panel profile add' later"
+    "$BIN/iroost" profile add || warn "profile not created: run 'iroost profile add' later"
     ask_no "Add one more?" || break
   done
 fi
@@ -344,14 +373,14 @@ else
   info "not signed in: run 'gh auth login' to list your pull requests"
 fi
 
-[[ -t 1 ]] && "$BIN/lzr1-panel" splash --install || true
+[[ -t 1 ]] && "$BIN/iroost" splash --install || true
 
 step "Checking everything"
-"$BIN/lzr1-panel" doctor || warn "fix the items marked ✗ above (docs/troubleshooting.md explains each)"
+"$BIN/iroost" doctor || warn "fix the items marked ✗ above (docs/troubleshooting.md explains each)"
 
 step "Done"
-info "1. open a new terminal (or: source ~/.zshrc), then run: lzr1-panel open"
+info "1. open a new terminal (or: source ~/.zshrc), then run: iroost open"
 info "2. start a session: n (Opus), s (Sonnet), a (Agy) or c (opencode) in the panel, or click [≡ menu]; click a session to see it"
 info "3. the Pokémon theme is on: p picks a session's Pokémon, [≡ menu] in the footer turns the theme on or off"
-info "4. the panel in a browser or on your phone: lzr1-panel remote on (needs Tailscale; docs/remote.md)"
-info "keys: lzr1-panel keys · profiles: lzr1-panel profile help · anything wrong: lzr1-panel doctor"
+info "4. the panel in a browser or on your phone: iroost remote on (needs Tailscale; docs/remote.md)"
+info "keys: iroost keys · profiles: iroost profile help · anything wrong: iroost doctor"

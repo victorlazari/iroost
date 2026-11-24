@@ -1,4 +1,4 @@
-# Profiles hold hosts, usernames and key paths: they live in ~/.config/lzr1-panel and never here.
+# Profiles hold hosts, usernames and key paths: they live in ~/.config/iroost and never here.
 *.conf
 profiles/
 *.key
@@ -6,5 +6,5 @@ profiles/
 .env*
 .DS_Store
 
-# The remote gateway binary, built by lzr1-panel remote and install.sh.
-gateway/lzr1-remote-gw
+# The remote gateway binary, built by iroost remote and install.sh.
+gateway/iroost-remote-gw
