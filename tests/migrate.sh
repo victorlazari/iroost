@@ -15,6 +15,9 @@ echo x >"$HOME/.cache/lzr1-panel/prs"
 ln -s "$R/bin/lzr1-panel" "$BIN/lzr1-panel"; ln -s "$R/skills/lzr1-panel-profiles" "$SKILLS/lzr1-panel-profiles"
 printf 'export KEEP=1\n# >>> lzr1-panel >>>\nlzr1-panel open\n# <<< lzr1-panel <<<\nexport ALSO=1\n' >"$HOME/.zshrc"
 
+# A bare `iroost` run before the move leaves empty new folders: they must not block it.
+mkdir -p "$CONFIG/profiles" "$HOME/.cache/iroost"
+
 migrate_from_lzr1_panel
 
 [ -f "$CONFIG/profiles/me.conf" ] && [ -f "$CONFIG/layout.conf" ] || say "profiles or layout were not moved to $CONFIG"
