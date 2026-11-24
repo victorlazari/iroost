@@ -751,3 +751,15 @@ shell hides it.
 The refresh button fetches the list again from GitHub. It used to delete the saved list first, so one failed fetch
 (offline, GitHub rate limit, a stale `GITHUB_TOKEN`) left the section empty. Now the last list stays on screen until
 GitHub answers with a new one. If it stays old, run `lzr1-panel doctor`: it shows which GitHub account the panel uses.
+
+### The panel freezes, or the machine's load climbs after a few panels
+
+fzf ignores clicks and keys while the panel builds its list, and older versions had three ways to make that long: a
+panel closed from its tmux layout never ended (its `_panel`, `_quit` and `_spotpoll` stayed alive, each asking Spotify
+for the track every 2 seconds, with no limit on the wait), a Spotify that did not answer piled up `osascript` calls, and
+a refresh waited for the slowest machine and for GitHub. Now a quitting panel flags its pollers to stop, Spotify gets 3
+seconds, a machine 8, the pull requests refresh on their own, and `lzr1-panel open` ends panels a dead layout left.
+
+**Fix:** update the panel (`git pull`) and run `lzr1-panel open`: it ends the old ones. By hand:
+`ps -axo pid,ppid,command | grep 'lzr1-panel _'` shows them, and a `_panel` whose parent (`ppid`) is `1` is dead:
+`kill -9` it. `pkill -f 'lzr1-panel _spotpoll'` ends the Spotify pollers.

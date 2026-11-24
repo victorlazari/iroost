@@ -775,15 +775,20 @@ list_rows() {
       else : >$tmp/$p.fail; fi
     done
   else
+    local -a pids
     for p in $names; do
       # An offline machine is retried once a minute, so it never slows every refresh.
       down=( $STATE/down-$p(Nms-60) )
       if (( $#down )); then : >$tmp/$p.fail; continue; fi
-      ( if load $p && on "$EXP$LIST_SCRIPT" "$P_ONLY" >$tmp/$p.out 2>/dev/null; then rm -f $STATE/down-$p
+      # A machine that does not answer in 8s counts as down: fzf ignores clicks and keys while this list builds.
+      ( if load $p && with_timeout 8 on "$EXP$LIST_SCRIPT" "$P_ONLY"; then print -r -- $REPLY >$tmp/$p.out; rm -f $STATE/down-$p
         else : >$tmp/$p.fail; : >$STATE/down-$p; fi ) &
+      pids+=( $! )
     done
-    prs_refresh &
-    wait
+    # The pull requests refresh on their own (once a minute): the list shows the last ones meanwhile, and the next
+    # refresh the new ones. Only a panel with no list yet waits for them.
+    if [[ -s $STATE/prs ]]; then prs_refresh >/dev/null 2>&1 &!; else prs_refresh & pids+=( $! ); fi
+    wait $pids
   fi
   local W=$(( ${FZF_COLUMNS:-${COLUMNS:-56}} - 2 )); (( W < 40 )) && W=40
   local -a items got; local n=0 w=0 q=0 i=0 a=0 line kind glyph right l1 l2 l3 mk u pw cur hd fl
@@ -1538,20 +1543,32 @@ SPOT=$STATE/spotify
 
 # spot_query: REPLY = state, title, artist, album, position (s), duration (ms), cover URL and volume, split by \037.
 # False when Spotify is not running (asking AppleScript would start it) or has no track.
+# with_timeout SECS CMD...: CMD's stdout in REPLY; rc 124 when it ran longer than SECS (it is killed). A Spotify that
+# does not answer an Apple Event must never hold up the panel, or pile up one osascript per poll.
+with_timeout() {
+  local secs=$1 f=$(mktemp) pid wd rc; shift
+  "$@" >$f 2>/dev/null </dev/null &
+  pid=$!
+  { sleep $secs; kill -KILL $pid } >/dev/null 2>&1 &
+  wd=$!
+  wait $pid 2>/dev/null; rc=$?
+  pkill -P $wd 2>/dev/null; kill $wd 2>/dev/null
+  (( rc == 137 )) && rc=124
+  REPLY=$(<$f); rm -f $f
+  return $rc
+}
+
 spot_query() {
   REPLY=
   [[ $OSTYPE == darwin* && $LZR1_SPOTIFY != off ]] || return 1
   pgrep -x Spotify >/dev/null 2>&1 || return 1
-  REPLY=$(osascript 2>/dev/null <<'AS'
-tell application "Spotify"
+  with_timeout 3 osascript -e 'tell application "Spotify"
   set pst to (player state as text)
   if pst is "stopped" then return pst
   set tr to current track
   set sep to (ASCII character 31)
   return pst & sep & (name of tr) & sep & (artist of tr) & sep & (album of tr) & sep & (player position as text) & sep & ((duration of tr) as text) & sep & (artwork url of tr) & sep & (sound volume as text)
-end tell
-AS
-)
+end tell'
   [[ $REPLY == (playing|paused)$'\037'* ]]
 }
 
@@ -1631,6 +1648,17 @@ foot_cmd() { print -rn -- "cat ${(q)SPOT}/foot 2>/dev/null; printf ' [≡ menu] 
 # ---- commands -------------------------------------------------------------------------------------------------------
 
 case $1 in
+
+_reap)  # _reap: end the panels (and their quits and viewers) a dead layout left running: they poll Spotify for ever
+  local pid ppid rest
+  ps -axo pid=,ppid=,command= | while read -r pid ppid rest; do
+    [[ $ppid == 1 && $rest == *" $SELF "(_panel|_quit|_viewer)" "<-> ]] && kill -KILL $pid 2>/dev/null
+  done
+  ;;
+
+_timeout)  # _timeout SECS CMD...: CMD's output, or rc 124 when it ran longer (tests/freeze.sh)
+  shift; with_timeout "$@"; local rc=$?; print -r -- $REPLY; exit $rc
+  ;;
 
 start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode args]
   load $2 || exit 1
@@ -2002,6 +2030,7 @@ open)  # panel on the left, viewer on the right
   # The lzr1 server exits with its last layout. A layout starting while it does (a browser reconnecting as its old
   # layout ends) is refused ("server exited unexpectedly"), or its session goes with the server: try again.
   # Any unattached layout left behind by an older version is cleaned up first so its viewer stops holding sessions open.
+  $SELF _reap
   local s; for s in $($T list-sessions -F '#{?session_attached,,#{session_name}}' 2>/dev/null); do
     [[ $s == lzr1-<-> ]] && $T kill-session -t "=$s" 2>/dev/null
   done
@@ -2171,6 +2200,7 @@ _ticker)  # _ticker ID PORT: show the first session in the viewer (a reconnectin
     # Every second: follow the viewer when it moved on by itself (a session ended); every 15s: reload.
     local n=0 key
     while sleep 1; do
+      [[ -e $STATE/$id.quit ]] && exit 0
       if [[ -s $STATE/$id.follow ]]; then
         key=$(<$STATE/$id.follow); rm -f $STATE/$id.follow
         $SELF _pos $id $port $key &
@@ -2661,7 +2691,7 @@ _fmenu)  # _fmenu ID KEY: the footer [≡ menu] list, replacing individual foote
 _spotpoll)  # _spotpoll ID PORT PANELPID: keep the Spotify block in the footer current while the panel (PANELPID) lives
   [[ $OSTYPE == darwin* && $LZR1_SPOTIFY != off ]] || exit 0
   ( local prev cur
-    while kill -0 $4 2>/dev/null; do
+    while kill -0 $4 2>/dev/null && [[ ! -e $STATE/$2.quit ]]; do
       spot_render
       cur=$(cat $SPOT/foot $SPOT/meta 2>/dev/null | cksum)
       # Not during a refresh's spinner: its last frame redraws the footer with the block.
@@ -2976,6 +3006,7 @@ _attach)  # _attach KEY
 
 _panel)  # _panel ID
   local id=$2 me
+  rm -f $STATE/$id.quit
   trap '$SELF _quit $id' HUP TERM INT
   printf '\e]2;lzr1 panel\a'
   if [[ $(mode $id) == tmux ]]; then
@@ -3055,6 +3086,7 @@ _panel)  # _panel ID
   ;;
 
 _quit)  # _quit ID: close the viewer and, in the tmux layout, the layout itself
+  : >$STATE/$2.quit  # first: this panel's pollers (_spotpoll, _ticker) end, though killing the layout ends us too
   if [[ $(mode $2) == tmux ]]; then
     local tty=$(tmux -L lzr1 list-clients -t lzr1-$2 -F '#{client_tty}' 2>/dev/null | head -1)
     tmux -L lzr1 kill-session -t lzr1-$2 2>/dev/null
