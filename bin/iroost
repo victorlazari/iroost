@@ -37,7 +37,8 @@
 emulate -L zsh
 setopt pipe_fail extended_glob
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-[[ ${(L)$(locale charmap 2>/dev/null)} == utf*8 ]] ||
+zmodload zsh/langinfo 2>/dev/null  # every iroost call starts a new zsh: no forks (locale, mkdir, chmod, head) on the way in
+[[ ${(L)langinfo[CODESET]} == utf*8 ]] ||
   { [[ $OSTYPE == darwin* ]] && export LC_ALL=en_US.UTF-8 || export LC_ALL=C.UTF-8 }
 
 VERSION=0.1.0
@@ -55,8 +56,10 @@ NARROW=${IROOST_NARROW:-$(( PANEL_W + 30 ))}  # a tmux layout under this many co
 # The keys the keyboard lock unbinds ($STATE/keylock exists while locked: it outlasts a panel that restarts).
 KEYLOCK_KEYS='n,s,a,c,x,w,f,t,o,p,r,m,l,q,+,=,-,[,],?,esc,enter,up,down,alt-s,alt-p,alt-up,alt-down,shift-up,shift-down'
 MENU_BUTTON=${IROOST_MENU_BUTTON:-right}  # the mouse button that opens a row's menu: right or left
-mkdir -p $PROFILES $STATE
-chmod 700 $CONFIG $PROFILES 2>/dev/null  # profiles hold hosts and key paths
+if [[ ! -d $PROFILES || ! -d $STATE ]]; then
+  mkdir -p $PROFILES $STATE
+  chmod 700 $CONFIG $PROFILES 2>/dev/null  # profiles hold hosts and key paths
+fi
 
 die() { print -ru2 -- "iroost: $*"; exit 1 }
 
@@ -387,13 +390,17 @@ profile_add() {
   [[ -z $key || -r $key ]] || die "SSH key not readable: $key"
   # Store paths to claude, agy and opencode that work without a login shell: tmux starts them with a bare PATH.
   P_TYPE=$type P_HOST=$host P_KEY=$key P_PORT=$port
-  if [[ -z $claude ]]; then
-    claude=$(on 'command -v claude 2>/dev/null || { [ -x "$HOME/.local/bin/claude" ] && echo "$HOME/.local/bin/claude"; }' 2>/dev/null)
+  # One round trip finds all three (each `on` is an ssh call): claude, agy and opencode, as three lines.
+  local found
+  if [[ -z $claude || -z $agy || -z $opencode ]]; then
+    found=$(on 'f() { command -v "$1" 2>/dev/null || { [ -x "$2" ] && echo "$2"; }; }
+      echo "claude=$(f claude "$HOME/.local/bin/claude")"; echo "agy=$(f agy "$HOME/.local/bin/agy")"
+      echo "opencode=$(f opencode "$HOME/.opencode/bin/opencode")"' 2>/dev/null)
+    [[ -n $claude ]] || claude=${${(M)${(f)found}:#claude=*}#claude=}
+    [[ -n $agy ]] || agy=${${(M)${(f)found}:#agy=*}#agy=}  # agy and opencode are optional
+    [[ -n $opencode ]] || opencode=${${(M)${(f)found}:#opencode=*}#opencode=}
     [[ -n $claude ]] || die "Claude Code not found on that machine (install it there, or pass --claude PATH)"
   fi
-  # agy and opencode are optional: a machine without them still gets a profile.
-  [[ -n $agy ]] || agy=$(on 'command -v agy 2>/dev/null || { [ -x "$HOME/.local/bin/agy" ] && echo "$HOME/.local/bin/agy"; }' 2>/dev/null)
-  [[ -n $opencode ]] || opencode=$(on 'command -v opencode 2>/dev/null || { [ -x "$HOME/.opencode/bin/opencode" ] && echo "$HOME/.opencode/bin/opencode"; }' 2>/dev/null)
   {
     print -r -- "# iroost profile: $name (written $(date +%Y-%m-%d)). Keep it out of git."
     print -r -- "type=$type"
@@ -975,6 +982,11 @@ list_rows() {
   pr_rows $W $1
 }
 
+# after ID: the fzf actions that follow anything that changed a session or a profile: redraw from the last list at once
+# (<15ms, no machine asked), then refresh in the background (_refresh: footer spinner; `again` queues one when a
+# refresh is already running). Never reload-sync: it holds the panel's keys and clicks until every machine answers.
+after() { print -rn -- "reload(IROOST_CACHED=1 $SELF _list $1)+execute-silent($SELF _refresh $1 \$FZF_PORT again)"; }
+
 # first_key ID SKIP...: the first session in the panel's last list, other than the SKIP keys, into REPLY
 first_key() {
   local id=$1 it; shift; REPLY=
@@ -1097,7 +1109,7 @@ TSBIN=${commands[tailscale]:-/Applications/Tailscale.app/Contents/MacOS/Tailscal
 # The macOS app installs /usr/local/bin/tailscale as a `#!/bin/sh` wrapper that does not exec the app's binary. Signals
 # to a serve started through it hit the shell, never the real client, which then never ends its foreground session
 # cleanly, and tailscaled keeps the route published for good. So use the app's binary itself when PATH holds a script.
-if [[ -r $TSBIN && $(head -c 2 $TSBIN 2>/dev/null) == '#!' && -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
+if [[ -r $TSBIN && $({ read -r -u0 -k 2 ts2 } <$TSBIN 2>/dev/null; print -r -- $ts2) == '#!' && -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
   TSBIN=/Applications/Tailscale.app/Contents/MacOS/Tailscale
 fi
 # A command prefix that runs it in a process group of its own (setsid, else perl), out of the terminal's: a terminal or
@@ -1730,6 +1742,7 @@ start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode a
     if [ -n "$cmd" ]; then tmux new-session -d -s "$name" -c "$dir" -x 200 -y 50 "$cmd" || exit 1
     else tmux new-session -d -s "$name" -c "$dir" -x 200 -y 50 || exit 1; fi
     tmux set-option -t "=$name:" window-size smallest 2>/dev/null || :
+    tmux set-option -t "=$name:" set-titles on 2>/dev/null; tmux set-option -t "=$name:" set-titles-string '#{session_name}' 2>/dev/null
     tmux set-option -t "=$name:" @iroost_model "$5"
     if [ "$6" = term ]; then tmux set-option -t "=$name:" @iroost_agent term; echo started; exit 0; fi
     # opencode asks no folder trust and has no Remote Control link: started once it outlives its first 2s.
@@ -1987,6 +2000,8 @@ run)  # run [--model ID] [--effort E] [--agy] [--opencode] [--name NAME] [args]:
   fi
   env -u TMUX tmux new-session -d -s "$name" -c "$PWD" -x ${COLUMNS:-200} -y ${LINES:-50} "$REPLY" || die "cannot start tmux"
   env -u TMUX tmux set-option -t "=$name:" window-size smallest 2>/dev/null
+  # The terminal's title is the session's name (it follows a rename), not the process and command line.
+  env -u TMUX tmux set-option -t "=$name:" set-titles on \; set-option -t "=$name:" set-titles-string '#{session_name}' 2>/dev/null
   case $model in *opus*) fam=opus ;; *sonnet*) fam=sonnet ;; *haiku*) fam=haiku ;; *fable*) fam=fable ;; *) fam=$model ;; esac
   [[ -n $oc ]] && fam=opencode && env -u TMUX tmux set-option -t "=$name:" @iroost_agent opencode
   [[ -n $ag ]] && fam=agy && env -u TMUX tmux set-option -t "=$name:" @iroost_agent agy
@@ -2402,7 +2417,8 @@ _unclick)  # _unclick ID PANE: after a row's menu in the tmux layout (see _panel
            # panel, then the menu's reload, sent once fzf has read that release (it drops input while it reloads)
   tmux -L iroost send-keys -t $3 -l $'\e[<0;1;1m' 2>/dev/null
   { sleep 0.2
-    curl -s -m 5 -H "x-api-key: $FZF_API_KEY" -XPOST "localhost:$FZF_PORT" -d "reload-sync($SELF _list $2)"
+    curl -s -m 5 -H "x-api-key: $FZF_API_KEY" -XPOST "localhost:$FZF_PORT" -d "reload(IROOST_CACHED=1 $SELF _list $2)"
+    $SELF _refresh $2 $FZF_PORT again
   } >/dev/null 2>&1 &!
   ;;
 
@@ -2482,7 +2498,7 @@ _enter)  # _enter ID KEY: enter and double-click transform; a profile/sash heade
       if [[ $(mode $2) == tmux && -s $STATE/$2.me ]]; then
         print -r -- "execute($SELF _menu $2 {1})+execute-silent($SELF _unclick $2 $(<$STATE/$2.me))"
       else
-        print -r -- "execute($SELF _menu $2 {1})+reload-sync($SELF _list $2)"
+        print -r -- "execute($SELF _menu $2 {1})+$(after $2)"
       fi ;;
     *)
       print -r -- "execute-silent($SELF _go $2 {1})" ;;
@@ -2643,22 +2659,24 @@ _footer)  # _footer ID: fzf's action for a click on the footer (" [≡ menu]  [�
   elif [[ $(mode $2) == tmux && -s $STATE/$2.me ]]; then
     print -r -- "execute($SELF _fmenu $2 {1})+transform($SELF _keysync)+execute-silent($SELF _unclick $2 $(<$STATE/$2.me))"
   else
-    print -r -- "execute($SELF _fmenu $2 {1})+transform($SELF _keysync)+reload-sync($SELF _list $2)"
+    print -r -- "execute($SELF _fmenu $2 {1})+transform($SELF _keysync)+$(after $2)"
   fi
   ;;
 
-_refresh)  # _refresh ID PORT [DELAY]: refresh the panel with a live spinner in the footer while _list runs
-  local id=$2 port=$3 delay=$4 cols=${FZF_COLUMNS:-${COLUMNS:-$PANEL_W}}
+_refresh)  # _refresh ID PORT [DELAY|again]: refresh the panel with a live spinner in the footer while _list runs
+  local id=$2 port=$3 delay=$4 cols=${FZF_COLUMNS:-${COLUMNS:-$PANEL_W}} again=
+  [[ $delay == again ]] && again=1 delay=
   [[ -n $id && -n $port ]] || exit 0
   rmdir $STATE/$id.rflock(Nms+15) 2>/dev/null
-  mkdir $STATE/$id.rflock 2>/dev/null || exit 0
+  # `again`: a refresh already running may have read the machines before this change; it runs once more when done.
+  mkdir $STATE/$id.rflock 2>/dev/null || { [[ -n $again ]] && : >$STATE/$id.rfagain; exit 0 }
   (
     local out=$STATE/$id.rf.$$ i=0 pid
     local -a api=(curl -sf -m 2 -H "x-api-key: $FZF_API_KEY" "localhost:$port")
     local -a sp=( ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏ )
     trap 'rm -rf $out $STATE/$id.rflock' EXIT HUP TERM INT
     [[ -n $delay ]] && sleep $delay
-    prs_stale
+    [[ -z $again ]] && prs_stale  # a session or profile change does not need new pull requests
     FZF_COLUMNS=$cols $SELF _list $id >$out 2>/dev/null &
     pid=$!
     while kill -0 $pid 2>/dev/null || (( i < 8 )); do
@@ -2675,6 +2693,7 @@ _refresh)  # _refresh ID PORT [DELAY]: refresh the panel with a live spinner in 
       sleep 0.6
     fi
     $api -XPOST -d "transform-footer($(foot_cmd))" >/dev/null 2>&1
+    if [[ -e $STATE/$id.rfagain ]]; then rm -f $STATE/$id.rfagain $STATE/$id.rflock; exec $SELF _refresh $id $port; fi
   ) >/dev/null 2>&1 &!
   ;;
 
@@ -2775,7 +2794,13 @@ _kill)  # _kill KEY [ID]: end the session (Claude and its tmux session); with ID
   [[ -n $id ]] && first_key $id $2 && next=$REPLY
   # The viewer moves first, so it is never left on a session that is gone.
   [[ -n $next ]] && $SELF _select $id $next force
-  load $KP && on 'tmux kill-session -t "=$1"' $KS
+  # The row goes at once (the panel redraws from the trimmed last list); the machine is told in the background, and
+  # the refresh that follows shows what it really has.
+  if [[ -r $STATE/raw-$KP ]]; then
+    local -a rawl=( ${(f)"$(<$STATE/raw-$KP)"} )
+    print -rl -- ${rawl:#$KS$'\037'*} >$STATE/raw-$KP.new && mv -f $STATE/raw-$KP.new $STATE/raw-$KP
+  fi
+  { load $KP && on 'tmux kill-session -t "=$1"' $KS; $SELF _refresh $id $FZF_PORT again } </dev/null >/dev/null 2>&1 &!
   [[ -n $next ]] && $SELF _pos $id $FZF_PORT $next >/dev/null 2>&1 &!
   ;;
 
@@ -3054,7 +3079,7 @@ _panel)  # _panel ID
   fi
   local S=$SELF
   # A row's menu opens on the right button (IROOST_MENU_BUTTON=left: on the left one, which then also picks the row).
-  local menu="execute($S _menu $id {1})+reload-sync($S _list $id)" button=right-click
+  local menu="execute($S _menu $id {1})+$(after $id)" button=right-click
   [[ $MENU_BUTTON == left ]] && button=left-click
   # fzf runs a footer click on the button's release, and only when it saw that button's press. A click opens the menu
   # on its press and the menu takes the release, so the next footer click would be lost. In the tmux layout a release
@@ -3064,7 +3089,7 @@ _panel)  # _panel ID
   # alone) instead of only moving the highlight (_tap decides); the arrow keys still only show it. A hidden panel (1 column behind the zoomed viewer) skips the reload a resize otherwise
   # makes. A row's key ({1}) only ever reaches a command as one argument fzf quotes, never text a shell evaluates: a
   # session's name can hold "$(...)".
-  local lmenu="execute($S _lmenu $id {1})+reload-sync($S _list $id)"
+  local lmenu="execute($S _lmenu $id {1})+$(after $id)"
   [[ $(mode $id) == tmux ]] && lmenu="execute($S _lmenu $id {1})+execute-silent($S _unclick $id $me)"
   local -a tap=()
   [[ $button != left-click ]] && tap=( --bind "left-click:execute-silent($S _tap $id {1} \$FZF_PORT)" )
@@ -3079,8 +3104,8 @@ _panel)  # _panel ID
     --border=none --header-border=bottom --header-label=' iroost ' \
     --footer=' [≡ menu]  [↻] ' --footer-border=top \
     --color='header:dim,footer:yellow,pointer:yellow,current-fg:bold' \
-    --bind "start:reload($S _list $id)+execute-silent($S _ticker $id \$FZF_PORT)+execute-silent($S _spotpoll $id \$FZF_PORT $$)$lockstart" \
-    --bind "resize:transform:[ \$FZF_COLUMNS -gt 2 ] && echo 'reload-sync($S _list $id)'" $tap \
+    --bind "start:reload(IROOST_CACHED=1 $S _list $id)+execute-silent($S _refresh $id \$FZF_PORT)+execute-silent($S _ticker $id \$FZF_PORT)+execute-silent($S _spotpoll $id \$FZF_PORT $$)$lockstart" \
+    --bind "resize:transform:[ \$FZF_COLUMNS -gt 2 ] && echo 'reload(IROOST_CACHED=1 $S _list $id)'" $tap \
     --bind "focus:execute-silent($S _select $id {1} &)" \
     --bind "enter:transform:$S _enter $id {1}" \
     --bind "double-click:transform:$S _enter $id {1}" \
@@ -3097,13 +3122,13 @@ _panel)  # _panel ID
     --bind "]:execute-silent($S _layout $id \$FZF_PORT scroll-down {1})" \
     --bind "t:execute-silent($S _tab $id {1})" \
     --bind "o:execute-silent($S _open_url {1})" \
-    --bind "p:execute($S _pokemon $id {1})+reload-sync($S _list $id)" \
-    --bind "n:execute($S _new opus $id {1})+reload-sync($S _list $id)" \
-    --bind "s:execute($S _new sonnet $id {1})+reload-sync($S _list $id)" \
-    --bind "a:execute($S _new agy $id {1})+reload-sync($S _list $id)" \
-    --bind "c:execute($S _new opencode $id {1})+reload-sync($S _list $id)" \
-    --bind "x:execute($S _kill {1} $id)+reload-sync($S _list $id)" \
-    --bind "w:execute($S _web $id)+reload-sync($S _list $id)" \
+    --bind "p:execute($S _pokemon $id {1})+$(after $id)" \
+    --bind "n:execute($S _new opus $id {1})+$(after $id)" \
+    --bind "s:execute($S _new sonnet $id {1})+$(after $id)" \
+    --bind "a:execute($S _new agy $id {1})+$(after $id)" \
+    --bind "c:execute($S _new opencode $id {1})+$(after $id)" \
+    --bind "x:execute($S _kill {1} $id)+$(after $id)" \
+    --bind "w:execute($S _web $id)+$(after $id)" \
     --bind "f:execute-silent($S _full $id)" \
     --bind "alt-s:first" --bind "alt-p:transform($S _prpos $id)" \
     --bind "r:execute-silent($S _refresh $id \$FZF_PORT)" \
