@@ -33,6 +33,15 @@ kill -0 $v 2>/dev/null && say "close left a viewer running" && kill $v
 kill -0 $b 2>/dev/null || say "close killed a bystander"
 kill $b 2>/dev/null
 
+# iroost profile add (local): all three lookups in one go, the file written; remove takes it away.
+mkdir -p "$HOME/r"
+zsh "$P" profile add t1 --local --repos "$HOME/r" --claude /bin/sh >/dev/null 2>&1
+grep -q '^claude=/bin/sh' "$HOME/.config/iroost/profiles/t1.conf" || say "profile add did not write the profile"
+zsh "$P" profile remove t1 >/dev/null 2>&1; [ ! -e "$HOME/.config/iroost/profiles/t1.conf" ] || say "profile remove left the file"
+
+# The panel never freezes on a reload: no fzf action waits for every machine (reload-sync does).
+grep -v '^ *#' "$P" | grep -q 'reload-sync(' && say "an fzf action uses reload-sync: the sidebar freezes while machines answer"
+
 # iroost nonsense: nothing on stdout, a pointer on stderr, rc 1.
 out=$(zsh "$P" nonsense 2>/dev/null); rc=$?
 [ "$rc" = 1 ] || say "unknown command: want rc 1 got $rc"
