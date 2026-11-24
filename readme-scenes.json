@@ -1,0 +1,85 @@
+{
+  "style": "terminal",
+  "scenes": [
+    {
+      "name": "hero",
+      "template": "hero",
+      "gif": "docs/hero.gif",
+      "still": "docs/hero.png",
+      "still_at": 7.6,
+      "seconds": 9,
+      "alt": "Animated. On the left, the headline All your AI coding sessions in one clickable roost. On the right, a terminal runs iroost open, reads local and SSH profiles, monitors 3 active agent sessions, checks GitHub for open pull requests, and raises an alert that session atlas needs an answer. A result card appears showing sessions online with their git branch, model, and status marks, noting that sessions run in tmux and survive disconnects.",
+      "data": {
+        "eyebrow": "iroost · personal session roost",
+        "title": "All your AI coding sessions in **one clickable roost**",
+        "subtitle": "Every Claude Code, agy and opencode session across your laptops and SSH servers, with your pull requests right beneath them.",
+        "prompt": "iroost open",
+        "lines": [
+          "reading local and SSH profiles",
+          "monitoring 3 active agent sessions",
+          "checking GitHub for open pull requests",
+          "alert: atlas needs your answer (make test)"
+        ],
+        "result": {
+          "title": "Sessions online and ready",
+          "items": [
+            "Sidebar list with state, model, git branch and folder",
+            "Live viewer attaches instantly when you click or press Enter",
+            { "text": "atlas: waiting on prompt, tone played", "warn": true }
+          ]
+        },
+        "footnote": "Sessions run in tmux and **survive** client disconnects."
+      }
+    },
+    {
+      "name": "before-after",
+      "template": "before-after",
+      "gif": "docs/before-after.gif",
+      "seconds": 12,
+      "alt": "Animated before and after. Before: five cards show common terminal headaches: tabs scattered across local and SSH servers, an agent paused silently 30 minutes ago asking for input, work lost when a terminal window closed, jumping between browser PR pages and terminals, and zero visibility from a phone. A green wipe reveals After: iroost open connects every session in a split view, rings a chime when an agent asks a question, preserves work in tmux, displays open pull requests in the sidebar, and offers private Tailscale browser access.",
+      "data": {
+        "title": "Your terminal workspace",
+        "time": "a visitor decides in 10 seconds",
+        "caption": "Illustration of managing multiple AI sessions without and with iroost.",
+        "before": [
+          { "tag": "tab sprawl", "text": "Ten terminal tabs scattered across local and SSH servers." },
+          { "tag": "silent wait", "text": "An agent paused to ask for permission 30 minutes ago." },
+          { "tag": "lost work", "text": "Closed a window by accident and lost the running task." },
+          { "tag": "context jump", "text": "Flipping between GitHub in a browser and terminal tabs." },
+          { "tag": "away from desk", "text": "Zero visibility into long-running jobs from your phone." }
+        ],
+        "prompt": "iroost open",
+        "lines": [
+          "scanning profiles: macbook-pro, oracle-server",
+          "listing 3 sessions and 2 pull requests",
+          "alerting on pending approval: Do you want to run make test?",
+          { "text": "Connected. Press enter to attach or w for tailnet browser.", "ok": true }
+        ],
+        "after": [
+          "Every session on every machine in one split view.",
+          "Chime and desktop notification when an agent asks a question.",
+          "Sessions run in tmux and stay alive through disconnects.",
+          "Open GitHub pull requests and review actions in the sidebar.",
+          "Browser access across your Tailscale network on phone or laptop."
+        ]
+      }
+    },
+    {
+      "name": "how-it-works",
+      "template": "how-it-works",
+      "gif": "docs/how-it-works.gif",
+      "seconds": 12,
+      "alt": "Animated diagram of four steps, left to right. 1, Add machines: iroost profile add for local folders or SSH hosts, saved in config. 2, Run agents: Claude Code, agy, opencode in persistent tmux sessions. 3, highlighted, View and switch: iroost open split layout, arrow keys preview live, Enter to type directly. 4, Stay alerted: tone and desktop alerts, asterisk on waiting rows, Tailscale browser via w. Below, a loop line notes that pressing w opens the roost on your phone over Tailscale.",
+      "data": {
+        "title": "How it works",
+        "steps": [
+          { "title": "Add machines", "items": ["`iroost profile add`", "Local folders or SSH hosts", "Saved in `~/.config/iroost`"] },
+          { "title": "Run agents", "items": ["Claude Code, agy, opencode", "Persistent tmux sessions", "Never lost if an app closes"] },
+          { "title": "View and switch", "highlight": true, "items": ["`iroost open` split layout", "Arrow keys preview live", "Enter to type directly"] },
+          { "title": "Stay alerted", "items": ["Tone and desktop alerts", "`✱` mark on waiting rows", "Tailscale browser via `w`"] }
+        ],
+        "loop": "Need remote access? Press `w` to open the session on your phone over Tailscale."
+      }
+    }
+  ]
+}
