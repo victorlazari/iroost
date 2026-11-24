@@ -24,6 +24,10 @@
 ![Go](https://img.shields.io/badge/Go-login_gateway-00ADD8?logo=go&logoColor=white)
 
 [Quick start](#-quick-start) ·
+[Sound familiar?](#-sound-familiar) ·
+[Who it is for](#-who-it-is-for) ·
+[Before and after](#-before-and-after) ·
+[How it works](#-how-it-works) ·
 [What you get](#-what-you-get) ·
 [Using it](#-using-it) ·
 [In a browser](#in-a-browser) ·
@@ -32,6 +36,11 @@
 [Something wrong?](#-something-wrong)
 
 </div>
+
+<!-- hero -->
+![Animated. On the left, the headline All your AI coding sessions in one clickable roost. On the right, a terminal runs iroost open, reads local and SSH profiles, monitors 3 active agent sessions, checks GitHub for open pull requests, and raises an alert that session atlas needs an answer. A result card appears showing sessions online with their git branch, model, and status marks, noting that sessions run in tmux and survive disconnects.](docs/hero.gif)
+
+<p align="center"><sub>Illustration of iroost managing active agent sessions and pull requests across machines.</sub></p>
 
 ```
  iroost ───────────────────────────────────────────────
@@ -62,6 +71,83 @@
 ```
 
 <p align="center"><sub>iroost, on the left of your terminal. Pick a session and the viewer, on the right, shows it live.</sub></p>
+
+---
+
+## 🪺 Sound familiar?
+
+- You started a long Claude Code task on your server, switched terminals, and forgot to check back for an hour.
+- Three terminal windows are running agents across two laptops, and you cannot tell which one is blocked on a prompt.
+- An agent asked *"Do you want to run make test?"* thirty minutes ago while you were reviewing a pull request in your browser.
+- You accidentally closed a terminal tab or lost an SSH connection, killing the active run.
+- You stepped away from your desk and wanted to check on a build from your phone without clumsy SSH setups.
+
+---
+
+## 🎯 Who it is for
+
+### A good fit if
+
+- You run Claude Code, agy or opencode across multiple folders, git branches, or SSH servers.
+- You rely on tmux so tasks keep running when you close your laptop or disconnect.
+- You want a single split view with instant chimes and desktop alerts when an agent asks for input.
+- You want to monitor and control your agent sessions from your phone over Tailscale.
+
+### Not for you if
+
+- You only run a single agent session at a time in a default terminal tab.
+- You prefer full graphical desktop IDE windows over keyboard-driven terminal workflows.
+
+---
+
+## ⚡ Before and after
+
+<!-- before-after -->
+![Animated before and after. Before: five cards show common terminal headaches: tabs scattered across local and SSH servers, an agent paused silently 30 minutes ago asking for input, work lost when a terminal window closed, jumping between browser PR pages and terminals, and zero visibility from a phone. A green wipe reveals After: iroost open connects every session in a split view, rings a chime when an agent asks a question, preserves work in tmux, displays open pull requests in the sidebar, and offers private Tailscale browser access.](docs/before-after.gif)
+
+<p align="center"><sub>Illustration of managing multiple AI sessions without and with iroost.</sub></p>
+
+---
+
+## 🧭 How it works
+
+<!-- how-it-works -->
+![Animated diagram of four steps, left to right. 1, Add machines: iroost profile add for local folders or SSH hosts, saved in config. 2, Run agents: Claude Code, agy, opencode in persistent tmux sessions. 3, highlighted, View and switch: iroost open split layout, arrow keys preview live, Enter to type directly. 4, Stay alerted: tone and desktop alerts, asterisk on waiting rows, Tailscale browser via w. Below, a loop line notes that pressing w opens the roost on your phone over Tailscale.](docs/how-it-works.gif)
+
+<p align="center"><sub>Illustration of the four-step loop behind iroost.</sub></p>
+
+1. **Add your machines**: Configure local repository directories and remote servers over SSH with `iroost profile add`. Profiles stay private in `~/.config/iroost`.
+2. **Run agents persistently**: Claude Code, agy and opencode run inside tmux on each machine, so conversations survive client disconnects.
+3. **View in one roost**: `iroost open` lists every session and pull request. Arrow keys preview live in the right pane; Enter attaches your keyboard directly.
+4. **Stay alerted anywhere**: An agent waiting for input gets an `✱` mark, plays a sound, and sends a system notification. Press `w` to access the exact same roost from any browser on your Tailscale network.
+
+```mermaid
+flowchart LR
+    you(["You"]) --> panel["iroost<br/>(fzf, on the left)"]
+    panel -- "pick a session" --> viewer["Viewer<br/>(on the right)"]
+    panel -- "list, every 15s" --> machines
+    viewer -- "tmux attach" --> machines
+    subgraph machines ["Your machines (profiles)"]
+        local["This computer"]
+        ssh["Servers over SSH"]
+    end
+    machines --> claude["Claude Code and opencode<br/>in tmux sessions"]
+    claude -. "Remote Control" .-> phone["claude.ai/code<br/>and your phone"]
+    panel -- "your open PRs, every minute" --> github["GitHub<br/>(gh)"]
+    panel -- "a session needs you" --> alert["✱ on its row,<br/>a tone, a notification"]
+    browser(["A browser on<br/>your tailnet"]) -- "Tailscale (HTTPS)" --> gw["Login gateway<br/>(allowlist + password)"]
+    gw -- "ttyd" --> panel2["Its own iroost<br/>on the same sessions"]
+    panel2 --> machines
+```
+
+- Each **machine** keeps its Claude Code and opencode sessions in **tmux**, so they run whether iroost is open
+  or not.
+- **iroost** (the list on the left) asks every machine for its sessions at once (one shared SSH connection per server), and asks
+  GitHub for your open pull requests. When a session finishes its reply or asks you something, it marks it,
+  plays a tone and shows a system notification.
+- The **viewer** attaches to the session you pick. Leave it with `Ctrl-b d`, and the session keeps going.
+- **In a browser**, `tailscale serve` publishes a login gateway on your tailnet; past it, each browser gets its own
+  iroost and viewer, on the same tmux sessions ([docs/remote.md](docs/remote.md)).
 
 ---
 
@@ -131,38 +217,6 @@ removes the old command, skill link and shell hook, and installs the new ones. T
 | 🐾 **A Pokémon for every session** | Each session gets one of the first 151, from a hash of its name, kept until the session ends and changeable with `p`. Its mood is the state iroost already tracks: `!` waiting on you, `✓` finished and not looked at yet, `zZz` idle for 3 minutes. Half-block sprites beside each card (text tags without ImageMagick), turned on or off from `[≡ menu]` in the footer; and in a browser a strip where they walk, stroll and sleep. See [docs/pokemon.md](docs/pokemon.md). |
 | 🛟 **Sessions survive** | If Claude, agy or opencode exits (two Ctrl-Cs, Claude's `/exit`, a crash), the session stays. Enter resumes the same conversation. |
 | ✂️ **Copy just works** | Drag to select, Ctrl-C, and it's on your clipboard: in any terminal, from any machine. |
-
----
-
-## 🧭 How it works
-
-```mermaid
-flowchart LR
-    you(["You"]) --> panel["iroost<br/>(fzf, on the left)"]
-    panel -- "pick a session" --> viewer["Viewer<br/>(on the right)"]
-    panel -- "list, every 15s" --> machines
-    viewer -- "tmux attach" --> machines
-    subgraph machines ["Your machines (profiles)"]
-        local["This computer"]
-        ssh["Servers over SSH"]
-    end
-    machines --> claude["Claude Code and opencode<br/>in tmux sessions"]
-    claude -. "Remote Control" .-> phone["claude.ai/code<br/>and your phone"]
-    panel -- "your open PRs, every minute" --> github["GitHub<br/>(gh)"]
-    panel -- "a session needs you" --> alert["✱ on its row,<br/>a tone, a notification"]
-    browser(["A browser on<br/>your tailnet"]) -- "Tailscale (HTTPS)" --> gw["Login gateway<br/>(allowlist + password)"]
-    gw -- "ttyd" --> panel2["Its own iroost<br/>on the same sessions"]
-    panel2 --> machines
-```
-
-- Each **machine** keeps its Claude Code and opencode sessions in **tmux**, so they run whether iroost is open
-  or not.
-- **iroost** (the list on the left) asks every machine for its sessions at once (one shared SSH connection per server), and asks
-  GitHub for your open pull requests. When a session finishes its reply or asks you something, it marks it,
-  plays a tone and shows a system notification.
-- The **viewer** attaches to the session you pick. Leave it with `Ctrl-b d`, and the session keeps going.
-- **In a browser**, `tailscale serve` publishes a login gateway on your tailnet; past it, each browser gets its own
-  iroost and viewer, on the same tmux sessions ([docs/remote.md](docs/remote.md)).
 
 ---
 
