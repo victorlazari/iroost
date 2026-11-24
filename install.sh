@@ -61,7 +61,13 @@ migrate_from_lzr1_panel() {
   for pair in "$cfg/lzr1-panel:$CONFIG" "$cache/lzr1-panel:$cache/iroost" "$cache/lzr1-panel-viewer:$cache/iroost-viewer"; do
     old=${pair%%:*} new=${pair#*:}
     [[ -d $old ]] || continue
-    if [[ -e $new ]]; then warn "left $old: $new already exists (merge by hand, then delete it)"; continue; fi
+    if [[ -e $new ]]; then
+      # A bare `iroost` run leaves empty folders behind: those are free. One holding any file is the person's, kept.
+      if [[ -n $(find "$new" ! -type d -print -quit 2>/dev/null) ]]; then
+        warn "left $old: $new already exists (merge by hand, then delete it)"; continue
+      fi
+      find "$new" -depth -type d -empty -delete
+    fi
     mkdir -p "$(dirname "$new")" && mv "$old" "$new" && ok "moved $old → $new" && moved=1
   done
   for old in "$BIN/lzr1-panel" "$SKILLS/lzr1-panel-profiles"; do
