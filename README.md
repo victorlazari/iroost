@@ -463,7 +463,7 @@ bin/iroost                      the command: list, viewer, sessions, PRs, menus,
 gateway/                        the remote's login gateway, iroost-remote-gw (Go, standard library only)
 lib/splash.zsh                  the opening animation
 install.sh                      the installer, for macOS and Linux (and the move from lzr1-panel)
-tests/                          the command line, the migration, the freeze guards, the version rules
+tests/                          the command line, the migration, the freeze guards, the refresh, the version rules
 docs/troubleshooting.md         problems and their fixes
 docs/remote.md                  iroost in a browser, over Tailscale: setup, safety, turning it off
 docs/profiles.md                how to create a profile (for people and AI assistants)
@@ -480,6 +480,8 @@ Changes are welcome. Before opening a pull request, check the scripts parse:
 zsh -n bin/iroost lib/splash.zsh
 bash -n install.sh          # it must also run on macOS's bash 3.2
 sh tests/cli.sh && bash tests/migrate.sh && sh tests/next-version.sh
+sh tests/collector.sh && sh tests/refresh-state.sh && sh tests/pr-cold.sh && sh tests/freeze.sh  # need tmux
+python3 tests/session-refresh.py   # the panel under a terminal, with a hung machine (needs fzf 0.74+)
 cd gateway && go vet ./... && go test ./... -race   # the remote's gateway
 ```
 

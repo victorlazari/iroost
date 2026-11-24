@@ -190,13 +190,29 @@ done
 # $1, when set, is the profile's only= folder: sessions elsewhere are left out.
 LIST_SCRIPT='
   now=$(date +%s) us=$(printf "\037") host=$(hostname) only=$(exp "$1"); only=${only%/}
+  nl="
+" gits=
   # tmux escapes control characters in -F output, so its fields split on "|"; the task title comes last, where a "|"
   # inside it stays put. Session names cannot contain "|" (iroost refuses them).
-  tmux list-sessions -F "#{session_name}|#{session_attached}|#{session_activity}|#{@rc_url}|#{@iroost_model}|#{pane_current_path}|#{@iroost_agent}|#{pane_title}" 2>/dev/null |
+  # No server running: no sessions, a fresh answer. A server that cannot be asked (its socket refuses this user, no
+  # tmux at all) is a failure: the scan fails, so the profile keeps its last rows, stale, and no session counts as
+  # ended. tmux says "error connecting to SOCKET (why)" for a missing socket and a refused one alike: the why tells.
+  if ! tl=$(tmux list-sessions -F "#{session_name}|#{session_attached}|#{session_activity}|#{@rc_url}|#{@iroost_model}|#{pane_current_path}|#{@iroost_agent}|#{pane_title}" 2>&1); then
+    case $tl in
+      "no server running on "*|"error connecting to "*"(No such file or directory)") tl= ;;
+      *) exit 1 ;;
+    esac
+  fi
+  [ -n "$tl" ] || exit 0
+  printf "%s\n" "$tl" |
   while IFS="|" read -r name att act url model dir agent title; do
     if [ -n "$only" ]; then case $dir in "$only"|"$only"/*) ;; *) continue ;; esac; fi
-    full=$(tmux capture-pane -p -J -t "=$name:" 2>/dev/null)
-    screen=$(printf "%s\n" "$full" | tail -25)
+    # A plain terminal'"'"'s screen is never read: capturing it is the scan'"'"'s cost per session.
+    full= screen=
+    if [ "$agent" != term ]; then
+      full=$(tmux capture-pane -p -J -t "=$name:" 2>/dev/null)
+      screen=$(printf "%s\n" "$full" | tail -25)
+    fi
     [ -z "$agent" ] && printf "%s" "$full" | grep -q "Antigravity CLI" && agent=agy
     if [ "$agent" = term ]; then
       # A plain terminal (no agent): nothing to read, it is always idle.
@@ -231,9 +247,17 @@ LIST_SCRIPT='
       case $title in "$host"|"$host".*|"Claude Code"|"") title= ;; esac
     fi
     branch= changed=
-    if [ -n "$dir" ] && b=$(git -C "$dir" branch --show-current 2>/dev/null); then
-      branch=${b:-detached}; changed=$(git -C "$dir" status --porcelain 2>/dev/null | wc -l | tr -d " ")
-    fi
+    # Git runs once per folder in a scan: $gits keeps "<newline>folder<US>branch<US>changed" for each folder seen
+    # (none, or a failed lookup, keeps both empty). tmux escapes control characters, so a folder holds neither.
+    case $gits in
+      *"$nl$dir$us"*)
+        g=${gits#*"$nl$dir$us"}; g=${g%%"$nl"*}; branch=${g%%"$us"*} changed=${g#*"$us"} ;;
+      *)
+        if [ -n "$dir" ] && b=$(git -C "$dir" branch --show-current 2>/dev/null); then
+          branch=${b:-detached}; changed=$(git -C "$dir" status --porcelain 2>/dev/null | wc -l | tr -d " ")
+        fi
+        gits="$gits$nl$dir$us$branch$us$changed" ;;
+    esac
     waitfor= detail=
     if [ $st = wait ]; then
       # The exit of this session'"'"'s own agent only: Claude may well show "opencode exited" in its work.
@@ -758,6 +782,62 @@ _seen_unlock() { { [[ $(<$STATE/seen.lock/pid) == $$ ]] } 2>/dev/null || return 
 # _fname NAME: NAME as one file name, into REPLY (% is %25, / is %2F: a session made with plain tmux may hold one)
 _fname() { REPLY=${${1//\%/%25}//\//%2F} }
 
+# collect [ID PORT]: every profile's sessions, asked in parallel, each into $STATE/raw-PROFILE as soon as its machine
+# answers. With a panel (ID PORT), the panel redraws as each profile lands: a slow machine holds up only its own rows.
+collect() {
+  local p; local -a pids
+  for p in $(profiles); do
+    ( collect_one $p; [[ -n $2 ]] && publish $1 $2 ) &
+    pids+=( $! )
+  done
+  # The pull requests refresh on their own (once a minute): the list shows the last ones meanwhile, and the next
+  # refresh the new ones. Only a panel with no list yet waits for them.
+  if [[ -s $STATE/prs ]]; then prs_refresh >/dev/null 2>&1 &!; else prs_refresh & pids+=( $! ); fi
+  wait $pids
+}
+
+# collect_one PROFILE: its machine's sessions into $STATE/raw-PROFILE, written whole. One collection per profile at a
+# time, however many panels ask. The running one may have read the machine before this ask (a session started since),
+# so a panel that finds one running leaves collect-PROFILE.again: the running one asks the machine once more, and takes
+# the request when it starts that pass. A request still there once it is done was left too late: this panel asks.
+# A machine that does not answer in 8s is down (down-PROFILE: its last rows stay, stale) and is retried once a minute.
+collect_one() {
+  local p=$1 lk=$STATE/collect-$1
+  local -a down
+  while :; do
+    down=( $STATE/down-$p(Nms-60) )
+    (( $#down )) && return 1
+    rm -rf $lk(N/ms+20)  # left by a collection that was killed (each pass ends in 8s and freshens it)
+    mkdir $lk 2>/dev/null && break
+    : >$lk.again
+    repeat 200; do [[ -d $lk ]] || break; sleep 0.1; done
+    [[ -d $lk ]] && return 1
+    [[ -e $lk.again ]] || return 0
+  done
+  {
+    while :; do
+      rm -f $lk.again; touch $lk
+      if load $p && with_timeout 8 on "$EXP$LIST_SCRIPT" "$P_ONLY"; then
+        print -r -- $REPLY >$lk/raw && mv -f $lk/raw $STATE/raw-$p; rm -f $STATE/down-$p
+      else : >$STATE/down-$p; return 1; fi
+      [[ -e $lk.again ]] || break
+    done
+  } always { rm -rf $lk }
+}
+
+# publish ID PORT [SNAP]: redraw panel ID from the raw rows (no machine asked) into its cache and show it; with SNAP
+# (the collection's start), it is the refresh's last redraw and tracks states (alerts). One redraw at a time, so an
+# older one never lands over a newer one. It runs in the background, so it draws at the width fzf last gave _list
+# (IROOST_BG), not at the one it was started with: the panel may have been resized since.
+publish() {
+  local lk=$STATE/$1.publish fd
+  zmodload zsh/system; : >>$lk
+  zsystem flock -t 15 -f fd $lk || return 0
+  if [[ -n $3 ]]; then IROOST_BG=1 IROOST_SNAP=$3 $SELF _list $1; else IROOST_BG=1 IROOST_CACHED=1 $SELF _list $1; fi >/dev/null 2>&1
+  curl -sf -m 2 -H "x-api-key: $FZF_API_KEY" -XPOST "localhost:$2" -d "reload(cat ${(q)STATE}/$1.cache)" >/dev/null 2>&1
+  zsystem flock -u $fd
+}
+
 # Every profile's sessions, listed in parallel, as NUL-separated fzf items: "KEY<tab>display". The first item is
 # the summary heading. A session is three lines (layout A): name with model and age; its task, or what it waits
 # for; its branch and repository. Sized to the panel ($FZF_COLUMNS).
@@ -776,34 +856,19 @@ list_rows() {
     return
   fi
   zmodload zsh/datetime
-  local tmp=$(mktemp -d) p snap=$EPOCHREALTIME  # what this refresh saw is as old as its start (_pos's are 0.8s apart)
-  local -a down
-  if [[ -n $IROOST_CACHED ]]; then
-    for p in $names; do
-      if [[ -r $STATE/raw-$p && ! -e $STATE/down-$p ]]; then cp $STATE/raw-$p $tmp/$p.out
-      else : >$tmp/$p.fail; fi
-    done
-  else
-    local -a pids
-    for p in $names; do
-      # An offline machine is retried once a minute, so it never slows every refresh.
-      down=( $STATE/down-$p(Nms-60) )
-      if (( $#down )); then : >$tmp/$p.fail; continue; fi
-      # A machine that does not answer in 8s counts as down: fzf ignores clicks and keys while this list builds.
-      ( if load $p && with_timeout 8 on "$EXP$LIST_SCRIPT" "$P_ONLY"; then print -r -- $REPLY >$tmp/$p.out; rm -f $STATE/down-$p
-        else : >$tmp/$p.fail; : >$STATE/down-$p; fi ) &
-      pids+=( $! )
-    done
-    # The pull requests refresh on their own (once a minute): the list shows the last ones meanwhile, and the next
-    # refresh the new ones. Only a panel with no list yet waits for them.
-    if [[ -s $STATE/prs ]]; then prs_refresh >/dev/null 2>&1 &!; else prs_refresh & pids+=( $! ); fi
-    wait $pids
-  fi
+  # What this refresh saw is as old as its start; IROOST_SNAP: the start of the collection _refresh made already.
+  local tmp=$(mktemp -d) p snap=${IROOST_SNAP:-$EPOCHREALTIME}
+  [[ -z $IROOST_CACHED && -z $IROOST_SNAP ]] && collect
+  # A machine that did not answer keeps its last rows, stale (down-PROFILE); one never heard from is left out.
+  for p in $names; do
+    if [[ -r $STATE/raw-$p ]]; then cp $STATE/raw-$p $tmp/$p.out; [[ -e $STATE/down-$p ]] && : >$tmp/$p.stale
+    else : >$tmp/$p.fail; fi
+  done
   local W=$(( ${FZF_COLUMNS:-${COLUMNS:-56}} - 2 )); (( W < 40 )) && W=40
   local -a items got; local n=0 w=0 q=0 i=0 a=0 line kind glyph right l1 l2 l3 mk u pw cur hd fl
   local name st att age url model dir title branch changed waitfor detail
   local D=$'\e[90m' B=$'\e[1m' C=$'\e[36m' Y=$'\e[33m' G=$'\e[32m' M=$'\e[37m' R=$'\e[0m'
-  local US=$'\037' track= seeded= f fn pts pst pwf ak
+  local US=$'\037' track= ptrack= health seeded= f fn pts pst pwf ak
   local -a alerts fresh live sf sv uf uv
   # A Pokémon for every session (lib/pokemon.zsh): its number, mood and, in sprite mode, three lines of art. The art is
   # cut in the background for the strip of a browser too, so ⇄ web is read first.
@@ -866,18 +931,19 @@ list_rows() {
     (( pidx++ ))
     load $p 2>/dev/null; kind=$P_TYPE
     got=( ${(f)"$(<$tmp/$p.out)"} )
-    [[ -z $IROOST_CACHED ]] && cp $tmp/$p.out $STATE/raw-$p  # the menu reads a session's details from here
+    # Stale rows are what the machine said last: no alert from them, and no session counts as ended.
+    ptrack=$track health=online; [[ -e $tmp/$p.stale ]] && ptrack= health=stale
     profile_gap $p $pidx; pgap=$REPLY
     local pgnl=${(pl:pgap::\n:)} ginfo=
     (( (pidx == 1 && pgap > 0) || (pidx > 1 && pgap != 1) )) && ginfo=" ↕${pgap}L"
-    hd=" ⠿ $p $kind · online · $#got$ginfo "
+    hd=" ⠿ $p $kind · $health · $#got$ginfo "
     fl=$(( W - ${#hd} - 1 )); (( fl < 0 )) && fl=0
-    items+=( "$p/"$'\t'"$pgnl $D⠿$R $B$p$R $D$kind · online · $#got ${(l:fl::─:)}$ginfo$R" )
+    items+=( "$p/"$'\t'"$pgnl $D⠿$R $B$p$R $D$kind · ${${health:#stale}:-$Y$health$D} · $#got ${(l:fl::─:)}$ginfo$R" )
     for line in $got; do
       IFS=$'\037' read -r name st att age url model dir title branch changed waitfor detail <<<"$line"
       (( n++ ))
       _fname $name; fn=$REPLY ak=
-      if [[ -n $track ]]; then
+      if [[ -n $ptrack ]]; then
         f=$STATE/seen/$p/$fn pts=0 pst= pwf=
         [[ -r $f ]] && IFS=$US read -r pts pst pwf <$f
         [[ $pts == <->(.<->|) ]] || { pwf=$pst pst=$pts pts=0 }  # an older "state<US>waitfor" file
@@ -943,7 +1009,7 @@ list_rows() {
       items+=( "$p/$name"$'\t'"$l1"$'\n'"$l2"$'\n'"$l3" )
     done
     # A session that ended leaves no state behind, so a new one with its name starts fresh.
-    if [[ -n $track ]]; then
+    if [[ -n $ptrack ]]; then
       live=( ${got%%$US*} ); live=( ${${live//\%/%25}//\//%2F} )
       for f in $STATE/(seen|unread|pokemon)/$p/*(N); do (( ${live[(Ie)${f:t}]} )) || rm -rf $f; done
     fi
@@ -1563,7 +1629,7 @@ with_timeout() {
   local secs=$1 f=$(mktemp) pid wd rc; shift
   "$@" >$f 2>/dev/null </dev/null &
   pid=$!
-  { sleep $secs; kill -KILL $pid } >/dev/null 2>&1 &
+  { sleep $secs; pkill -KILL -P $pid; kill -KILL $pid } >/dev/null 2>&1 &
   wd=$!
   wait $pid 2>/dev/null; rc=$?
   pkill -P $wd 2>/dev/null; kill $wd 2>/dev/null
@@ -1679,9 +1745,15 @@ _suggest() {
 case $1 in
 
 _reap)  # _reap: end the panels (and their quits and viewers) a dead layout left running: they poll Spotify for ever
-  local pid ppid rest
+  # An orphan's parent is PID 1, or on Linux the user's service manager when it adopts orphans (systemd --user): find
+  # it by leaving a process of our own behind (its parent, this subshell, ends at once) and reading who took it.
+  local pid ppid rest adopter=1
+  [[ $OSTYPE == darwin* ]] || adopter=$(zmodload zsh/system; sh -c 'n=0
+    while [ $n -lt 100 ] && [ "$(ps -o ppid= -p $$ | tr -d " ")" = "$1" ]; do sleep 0.01; n=$((n+1)); done
+    ps -o ppid= -p $$ | tr -d " "' sh $sysparams[pid] &!)
   ps -axo pid=,ppid=,command= | while read -r pid ppid rest; do
-    [[ $ppid == 1 && $rest == *" $SELF "(_panel|_quit|_viewer)" "<-> ]] && kill -KILL $pid 2>/dev/null
+    [[ ( $ppid == 1 || $ppid == $adopter ) && $rest == *" $SELF "(_panel|_quit|_viewer)" "<-> ]] &&
+      kill -KILL $pid 2>/dev/null
   done
   ;;
 
@@ -2023,7 +2095,12 @@ list)
   ;;
 
 _list)  # _list ID: rows for fzf, cached for _pos
-  { list_rows $2 | tee $STATE/$2.cache } always { rm -f $STATE/$2.rfwait }
+  zmodload zsh/system
+  local c=$STATE/$2.cache.$sysparams[pid] w
+  # fzf's own reloads know the panel's width ($ID.cols keeps it); a background redraw (IROOST_BG) takes it from there.
+  if [[ -n $IROOST_BG ]]; then { w=$(<$STATE/$2.cols) } 2>/dev/null; [[ $w == <-> ]] && FZF_COLUMNS=$w
+  elif [[ $FZF_COLUMNS == <-> ]]; then print -r -- $FZF_COLUMNS >$c.cols && mv -f $c.cols $STATE/$2.cols; fi
+  { list_rows $2 | tee $c; mv -f $c $STATE/$2.cache } always { rm -f $c $STATE/$2.rfwait }
   ;;
 
 profile)
@@ -2250,8 +2327,8 @@ _ticker)  # _ticker ID PORT: show the first session in the viewer (a reconnectin
         $SELF _pos $id $port $key &
       fi
       (( ++n % 15 )) && continue
-      [[ -e $STATE/$id.rflock ]] && continue
-      curl -sf -m 5 -H "x-api-key: $FZF_API_KEY" -XPOST "localhost:$port" -d "reload($SELF _list $id)" || exit 0
+      curl -sf -m 2 -H "x-api-key: $FZF_API_KEY" "localhost:$port?limit=0" >/dev/null || exit 0
+      $SELF _refresh $id $port tick
     done ) >/dev/null 2>&1 &!
   ;;
 
@@ -2259,9 +2336,8 @@ _pos)  # _pos ID PORT KEY: move the panel's highlight to KEY once the panel list
   local id=$2 port=$3 key=$4 i line api=(curl -s -m 2 -H "x-api-key: $FZF_API_KEY" "localhost:$3")
   local -a its
   repeat 20; do
-    sleep 0.3
-    $api -XPOST -d "reload($SELF _list $id)" >/dev/null
-    sleep 0.5
+    $SELF _refresh $id $port again  # one refresh at a time; the panel shows KEY once one lists it
+    sleep 0.8
     i=0
     its=( "${(@0)$(<$STATE/$id.cache)}" )
     for line in "${(@)its[2,-1]}"; do
@@ -2663,37 +2739,42 @@ _footer)  # _footer ID: fzf's action for a click on the footer (" [≡ menu]  [�
   fi
   ;;
 
-_refresh)  # _refresh ID PORT [DELAY|again]: refresh the panel with a live spinner in the footer while _list runs
-  local id=$2 port=$3 delay=$4 cols=${FZF_COLUMNS:-${COLUMNS:-$PANEL_W}} again=
+_refresh)  # _refresh ID PORT [DELAY|again|tick]: refresh the panel with a live spinner in the footer while machines
+          # answer; each profile shows as soon as its machine does. The only way a panel asks its machines (start, r,
+          # changes, _pos, and _ticker's quiet `tick`: no spinner, no new pull requests, nothing queued).
+  local id=$2 port=$3 delay=$4 cols=${FZF_COLUMNS:-${COLUMNS:-$PANEL_W}} again= tick=
   [[ $delay == again ]] && again=1 delay=
+  [[ $delay == tick ]] && tick=1 delay=
   [[ -n $id && -n $port ]] || exit 0
   rmdir $STATE/$id.rflock(Nms+15) 2>/dev/null
   # `again`: a refresh already running may have read the machines before this change; it runs once more when done.
   mkdir $STATE/$id.rflock 2>/dev/null || { [[ -n $again ]] && : >$STATE/$id.rfagain; exit 0 }
   (
-    local out=$STATE/$id.rf.$$ i=0 pid
+    local i=0 pid snap
     local -a api=(curl -sf -m 2 -H "x-api-key: $FZF_API_KEY" "localhost:$port")
     local -a sp=( ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏ )
-    trap 'rm -rf $out $STATE/$id.rflock' EXIT HUP TERM INT
+    trap 'rm -rf $STATE/$id.rflock' EXIT HUP TERM INT
     [[ -n $delay ]] && sleep $delay
-    [[ -z $again ]] && prs_stale  # a session or profile change does not need new pull requests
-    FZF_COLUMNS=$cols $SELF _list $id >$out 2>/dev/null &
+    [[ -z $again$tick ]] && prs_stale  # a session or profile change does not need new pull requests
+    zmodload zsh/datetime; snap=$EPOCHREALTIME
+    FZF_COLUMNS=$cols collect $id $port &
     pid=$!
-    while kill -0 $pid 2>/dev/null || (( i < 8 )); do
+    while [[ -z $tick ]] && { kill -0 $pid 2>/dev/null || (( i < 8 )) }; do
       (( i++ ))
       $api -XPOST -d "transform-footer($(foot_cmd "${sp[$(( (i - 1) % $#sp + 1 ))]} refreshing…"))" >/dev/null 2>&1 || exit 0
       sleep 0.08
     done
     wait $pid 2>/dev/null
-    if [[ -s $out ]]; then
-      mv -f $out $STATE/$id.cache
-      $api -XPOST -d "reload(cat ${(q)STATE}/$id.cache)" >/dev/null 2>&1
+    # The last redraw keeps the states it saw (alerts), unless a newer refresh already kept newer ones.
+    FZF_COLUMNS=$cols publish $id $port $snap
+    if [[ -z $tick ]]; then
       sleep 0.08
       $api -XPOST -d "transform-footer($(foot_cmd '✓ refreshed'))" >/dev/null 2>&1
       sleep 0.6
+      $api -XPOST -d "transform-footer($(foot_cmd))" >/dev/null 2>&1
     fi
-    $api -XPOST -d "transform-footer($(foot_cmd))" >/dev/null 2>&1
-    if [[ -e $STATE/$id.rfagain ]]; then rm -f $STATE/$id.rfagain $STATE/$id.rflock; exec $SELF _refresh $id $port; fi
+    # rflock is a directory: rm -f would leave it, and the rerun (exec: no EXIT trap) would find it held and give up.
+    if [[ -e $STATE/$id.rfagain ]]; then rm -rf $STATE/$id.rfagain $STATE/$id.rflock; exec $SELF _refresh $id $port; fi
   ) >/dev/null 2>&1 &!
   ;;
 
