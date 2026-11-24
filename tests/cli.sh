@@ -17,7 +17,21 @@ out=$(zsh "$P" help 2>&1); rc=$?
 [ "$rc" = 0 ] || say "iroost help: want rc 0 got $rc"
 echo "$out" | grep -q 'iroost remote on' || say "iroost help does not list 'remote on'"
 echo "$out" | grep -q 'iroost splash' || say "iroost help does not list 'splash'"
+echo "$out" | grep -q 'iroost close' || say "iroost help does not list 'close'"
 [ "$(zsh "$P" --help 2>&1)" = "$out" ] || say "--help differs from help"
+
+# iroost close with nothing open: says so, rc 0, and the machines' tmux sessions stay (it never touches them).
+out=$(zsh "$P" close 2>&1); rc=$?
+[ "$rc" = 0 ] || say "close: want rc 0 got $rc"
+echo "$out" | grep -qi 'keep running' || say "close does not say the tmux sessions keep running: $out"
+
+# iroost close ends a running panel/viewer process (here a stand-in with the same command line), not a bystander.
+sh -c "exec -a 'zsh $P _viewer 4242' sleep 60" & v=$!
+sleep 30 & b=$!
+zsh "$P" close >/dev/null 2>&1; sleep 0.5
+kill -0 $v 2>/dev/null && say "close left a viewer running" && kill $v
+kill -0 $b 2>/dev/null || say "close killed a bystander"
+kill $b 2>/dev/null
 
 # iroost nonsense: nothing on stdout, a pointer on stderr, rc 1.
 out=$(zsh "$P" nonsense 2>/dev/null); rc=$?
