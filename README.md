@@ -252,6 +252,7 @@ iroost run --agy                        # agy here (--dangerously-skip-permissio
 iroost run --opencode                   # opencode here (auto-approve on), the same way
 iroost start PROFILE opus|sonnet|agy|opencode NAME  # a session, without opening the app
 iroost attach PROFILE NAME              # this terminal into a session
+iroost close                            # close every open iroost; the sessions keep running in tmux
 iroost list                             # every session, then your PRs
 iroost prs                              # your open pull requests
 iroost doctor                           # check everything, with fixes: this computer, GitHub, alerts,

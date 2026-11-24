@@ -14,6 +14,8 @@
 #   iroost run --agy [args]                          the same with agy --dangerously-skip-permissions
 #   iroost run --opencode [args]                     the same with opencode --auto (its subcommands run plain)
 #   iroost attach PROFILE NAME                       this terminal into a session
+#   iroost close                                     close every open iroost (panels, viewers, layouts); the sessions
+#                                                    themselves keep running in tmux on their machines
 #   iroost list                                      print every profile's sessions, then your open PRs
 #   iroost prs                                       your open pull requests (the GitHub account on this machine)
 #   iroost doctor                                    check everything the panel needs, with the fix for what is missing
@@ -1653,6 +1655,7 @@ _suggest() {
   iroost run                        Claude in a new tmux session in this folder
   iroost start PROFILE opus NAME    start a session on a profile (opus|sonnet|agy|opencode|term)
   iroost attach PROFILE NAME        this terminal into a session
+  iroost close                      close every open iroost; the sessions keep running in tmux
   iroost profile add                register a machine, guided
   iroost remote on                  the app in a browser on your tailnet
   iroost doctor                     check everything it needs, with the fix for what is missing
@@ -1668,6 +1671,18 @@ _reap)  # _reap: end the panels (and their quits and viewers) a dead layout left
   ps -axo pid=,ppid=,command= | while read -r pid ppid rest; do
     [[ $ppid == 1 && $rest == *" $SELF "(_panel|_quit|_viewer)" "<-> ]] && kill -KILL $pid 2>/dev/null
   done
+  ;;
+
+close)  # close: end every open iroost (panels, viewers, layouts, their pollers); the machines' tmux sessions stay
+  local pid ppid rest f n=0
+  for f in $STATE/<->.mode(N); do : >$STATE/${${f:t}%.mode}.quit; done  # pollers end first
+  tmux -L iroost kill-server 2>/dev/null  # the layouts (a tmux layout, a browser's) live on this server only
+  ps -axo pid=,ppid=,command= | while read -r pid ppid rest; do
+    [[ $rest == *" $SELF "(_panel|_quit|_viewer|_ticker|_spotpoll)" "<->* ]] || continue
+    [[ $rest == *" $SELF _viewer "* ]] && pkill -TERM -P $pid 2>/dev/null  # its attach: detaches, the session stays
+    kill -TERM $pid 2>/dev/null && [[ $rest == *" $SELF _panel "* ]] && (( n++ ))
+  done
+  print -r -- "closed $n iroost panel(s); the tmux sessions keep running"
   ;;
 
 _timeout)  # _timeout SECS CMD...: CMD's output, or rc 124 when it ran longer (tests/freeze.sh)
