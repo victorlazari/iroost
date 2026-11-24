@@ -3,7 +3,7 @@
 **Start here.** This checks everything the panel needs and says how to fix what is missing:
 
 ```sh
-lzr1-panel doctor
+iroost doctor
 ```
 
 Still stuck? Find your problem below. Each one is: what you see, why, and the fix.
@@ -25,7 +25,7 @@ Still stuck? Find your problem below. Each one is: what you see, why, and the fi
 
 ## Installing
 
-### `lzr1-panel: command not found`
+### `iroost: command not found`
 
 The command lives in `~/.local/bin`, which your current terminal may not have on its PATH yet.
 
@@ -45,6 +45,14 @@ The panel needs fzf 0.74 or newer, and some Linux distributions ship an old one.
 **Fix:** run `./install.sh` again; on Linux it puts the latest fzf in `~/.local/bin`. Check with `fzf --version`,
 and make sure `~/.local/bin` comes first on your PATH (`which fzf`).
 
+### `lzr1-panel: command not found`, or my `LZR1_*` settings do nothing
+
+lzr1-panel is now **iroost**. Run `./install.sh` again in the folder you cloned: it moves `~/.config/lzr1-panel` to
+`~/.config/iroost` (profiles, layout, remote settings) and the cache with it, and replaces the old command, skill link and
+shell hook. Then use `iroost open`. Settings were renamed too: `LZR1_SPLASH` is `IROOST_SPLASH`, `LZR1_NOTIFY` is
+`IROOST_NOTIFY`, and so on; edit your own shell files (`~/.zshrc`, `~/.zshenv`) for any `lzr1-panel` or `LZR1_` left. The
+installer says when it left an old folder because the new one already exists: merge them by hand, then delete the old one.
+
 ---
 
 ## Opening the panel
@@ -54,22 +62,22 @@ and make sure `~/.local/bin` comes first on your PATH (`which fzf`).
 On macOS the panel splits your Ghostty window, which needs permission to control Ghostty.
 
 **Fix:** open **System Settings → Privacy & Security → Automation** and allow your terminal to control **Ghostty**.
-Then run `lzr1-panel open` again.
+Then run `iroost open` again.
 
 ### It opens as a tmux layout instead of a Ghostty split
 
 The split only happens when you run it **in Ghostty, outside tmux**.
 
-**Fix:** run `lzr1-panel open` in a plain Ghostty window. Inside tmux, or in another terminal, the tmux layout is
+**Fix:** run `iroost open` in a plain Ghostty window. Inside tmux, or in another terminal, the tmux layout is
 expected and works the same way.
 
 ### The panel opens every time I open Ghostty, and I don't want that
 
-**Fix:** add `export LZR1_PANEL=0` to `~/.zshenv`, or run `./install.sh` again and answer no to that question.
+**Fix:** add `export IROOST_PANEL=0` to `~/.zshenv`, or run `./install.sh` again and answer no to that question.
 
 ### The opening animation is too long
 
-**Fix:** press any key to skip it. `LZR1_SPLASH_SECONDS=2` shortens it, `LZR1_SPLASH=0` turns it off.
+**Fix:** press any key to skip it. `IROOST_SPLASH_SECONDS=2` shortens it, `IROOST_SPLASH=0` turns it off.
 
 ### The opening animation flashes or jumps in Ghostty
 
@@ -77,7 +85,7 @@ In an older version, a `local` variable redeclared inside the splash loop printe
 update mode (`\e[?2026h`) once the logo appeared, scrolling the alternate screen by a line before each redraw, and each
 frame cleared all rows before drawing.
 
-**Fix:** update the panel (`git pull` in the lzr1-panel folder). `LZR1_SPLASH=0` skips the animation altogether.
+**Fix:** update the panel (`git pull` in the iroost folder). `IROOST_SPLASH=0` skips the animation altogether.
 
 ---
 
@@ -87,11 +95,11 @@ frame cleared all rows before drawing.
 
 The panel leaves out a machine that does not answer, and tries it again once a minute.
 
-**Fix:** run `lzr1-panel profile test NAME`. Then check:
+**Fix:** run `iroost profile test NAME`. Then check:
 
 - **Can you SSH to it?** Run `ssh user@host` yourself once. The panel never types passwords: the machine must
   accept your SSH key, and its host key must already be known (the first `ssh` asks you to accept it).
-- **The right key?** `lzr1-panel profile show NAME` shows the key file it uses.
+- **The right key?** `iroost profile show NAME` shows the key file it uses.
 - **Is tmux there?** `profile test` says `tmux: missing` if not. Install it on that machine.
 
 ### `Claude Code not found on that machine`
@@ -106,7 +114,7 @@ sign in, then add the profile again. Or point to it: `--claude /path/to/claude`.
 **Fix:** start it from a terminal to see the error:
 
 ```sh
-lzr1-panel start PROFILE opus NAME
+iroost start PROFILE opus NAME
 ```
 
 The usual causes:
@@ -126,30 +134,30 @@ The panel answers this for you only when the session opens in one of your reposi
 The panel only lists sessions that run **inside tmux**. A `claude` started straight in a terminal tab is invisible
 to it.
 
-**Fix:** start sessions with `cl-opus` / `cl-sonnet` / `cl-opencode` (installed by `./install.sh`), `lzr1-panel
+**Fix:** start sessions with `cl-opus` / `cl-sonnet` / `cl-opencode` (installed by `./install.sh`), `iroost
 run`, or the panel's `n` / `s` / `c`. To move a running conversation over, quit it (`/exit`), then in the same folder:
 
 ```sh
-lzr1-panel run --model opus --continue
+iroost run --model opus --continue
 ```
 
-Your own `cl-*` aliases can do the same: make them call `lzr1-panel run --model MODEL --effort EFFORT -- "$@"`.
+Your own `cl-*` aliases can do the same: make them call `iroost run --model MODEL --effort EFFORT -- "$@"`.
 
 ### The same session shows under two profiles
 
 Both profiles point at the same machine, and at least one was made by an older version, which listed every session
-on its machine (no `only=` in `lzr1-panel profile show NAME`).
+on its machine (no `only=` in `iroost profile show NAME`).
 
 **Fix:** edit the profile (press Enter at each question): an edited profile lists just the sessions inside its
 repositories folder.
 
 ```sh
-lzr1-panel profile edit NAME
+iroost profile edit NAME
 ```
 
 ### A session is missing from its profile
 
-A profile with `only=` lists just the sessions whose folder is inside it. `lzr1-panel profile show NAME` shows it.
+A profile with `only=` lists just the sessions whose folder is inside it. `iroost profile show NAME` shows it.
 
 **Fix:** start the session inside that folder, or add a profile for the folder it runs in.
 
@@ -173,11 +181,11 @@ The same goes for opencode: its session waits on `opencode exited. Enter: resume
 
 `c` or `[+opencode]` shows nothing new, or `start` says `opencode exited right after start`.
 
-**Fix:** run `lzr1-panel profile test NAME`. Its `opencode:` line shows the opencode the panel starts there, or
+**Fix:** run `iroost profile test NAME`. Its `opencode:` line shows the opencode the panel starts there, or
 `not installed`:
 
 - **Not installed.** Install it on that machine (`brew install sst/tap/opencode`, or see
-  [opencode.ai](https://opencode.ai)), then run `lzr1-panel profile edit NAME` and press Enter through its
+  [opencode.ai](https://opencode.ai)), then run `iroost profile edit NAME` and press Enter through its
   questions: a profile with no `opencode=` line gets the opencode it finds there. Installed somewhere else: add an
   `opencode=/path/to/opencode` line to the profile. tmux starts it with a bare PATH, so the profile needs its full
   path.
@@ -185,7 +193,7 @@ The same goes for opencode: its session waits on `opencode exited. Enter: resume
   resume prompt. Usually it has no provider yet: run `opencode auth login` on that machine.
 
 ```sh
-lzr1-panel start PROFILE opencode NAME
+iroost start PROFILE opencode NAME
 ```
 
 ### An opencode session shows the wrong state
@@ -198,9 +206,9 @@ opencode **2.0.32**'s screen; a newer version may change them, and the row (and 
 **Fix:**
 
 - Check `opencode --version` on that machine. If it is newer and the glyphs are wrong, look at its screen
-  (`tmux capture-pane -p -t '=NAME:'`) and update the markers in `LIST_SCRIPT` (`bin/lzr1-panel`).
+  (`tmux capture-pane -p -t '=NAME:'`) and update the markers in `LIST_SCRIPT` (`bin/iroost`).
 - An opencode started by hand inside tmux is read as Claude, so it mostly shows idle. Start opencode sessions with
-  `c`, `cl-opencode` or `lzr1-panel run --opencode`.
+  `c`, `cl-opencode` or `iroost run --opencode`.
 
 ---
 
@@ -216,7 +224,7 @@ The viewer waits like this only for a session the panel has just created, for up
 another session ends the wait. A session that ended moves the viewer to the first one left by itself.
 
 **Fix:** click another session. Still stuck? You are on an older version: quit the panel (`q`), update
-(`git pull` in the lzr1-panel folder) and run `lzr1-panel open` again.
+(`git pull` in the iroost folder) and run `iroost open` again.
 
 ### I closed the viewer pane
 
@@ -236,14 +244,14 @@ With text selected, Ctrl-C copies it instead of reaching Claude.
 
 Claude Code grows its input box downward until it reaches the bottom row of the session's tmux window, and only starts
 scrolling the input box once it hits that row. When the tmux window is taller than your viewer pane—because a taller
-second window is attached to the same session, or a previous `lzr1` tmux layout was left running in the background when
+second window is attached to the same session, or a previous `iroost` tmux layout was left running in the background when
 a terminal window was closed without pressing `q`—the bottom rows of the session sit below the viewer's edge, and new
 lines disappear there.
 
 The panel now sets `window-size smallest` on sessions, marks its tmux layouts `destroy-unattached on`, and cleans up
-any unattached `lzr1-*` layouts when `lzr1-panel open` runs.
+any unattached `iroost-*` layouts when `iroost open` runs.
 
-**Fix:** quit the panel (`q`) and run `lzr1-panel open` again (or pick the session again in the panel so its viewer
+**Fix:** quit the panel (`q`) and run `iroost open` again (or pick the session again in the panel so its viewer
 refreshes the session's window size).
 
 ---
@@ -269,7 +277,7 @@ and when the viewer attaches to a session.
 
 **Fix:**
 
-1. Quit the panel (`q`) and run `lzr1-panel open` again, then pick the session.
+1. Quit the panel (`q`) and run `iroost open` again, then pick the session.
 2. Select, Ctrl-C, then paste somewhere to check.
 3. On Linux, the panel needs `wl-copy` (Wayland) or `xclip` (X11) installed, or a terminal that supports OSC 52.
 
@@ -290,7 +298,7 @@ Then Cmd-C copies, as in any terminal. This also works in the panel, which uses 
 ### Ctrl-C does not copy a Shift-selection in Ghostty
 
 **Fix:** run `./install.sh` again and say yes to *"Let Ctrl+C copy selected text in Ghostty"*. Then reload
-Ghostty's config with **Cmd+Shift+,**. `lzr1-panel doctor` tells you whether it is set.
+Ghostty's config with **Cmd+Shift+,**. `iroost doctor` tells you whether it is set.
 
 ### Copying from an SSH machine does not work
 
@@ -309,7 +317,7 @@ The panel could not use `gh`, so it fell back to your SSH key, which only finds 
 `gh` signs in through a `GITHUB_TOKEN` set in your shell's startup files: Ghostty starts the panel's split without
 them. The panel now passes `GITHUB_TOKEN` and `GH_TOKEN` on, and a short `gh` failure keeps the last list.
 
-**Fix:** quit the panel (`q`) and run `lzr1-panel open` again. Still `ssh`? Run `lzr1-panel prs` to see the
+**Fix:** quit the panel (`q`) and run `iroost open` again. Still `ssh`? Run `iroost prs` to see the
 error, or sign gh in for good with `gh auth login` (it then no longer needs the variable).
 
 ### The pull requests section shows `Bad credentials`, `401` or a `{` heading
@@ -319,17 +327,17 @@ your keyring. Usually you made a new token and ran `gh auth login` again, but tm
 server keeps the environment it started with and gives it to every new window. Older versions also put the `401`
 reply's lines into the list as if they were pull requests.
 
-**Fix:** update lzr1-panel and restart it (`q`, then `lzr1-panel open`). It now drops a refused token and uses
-`gh`'s own login, and `lzr1-panel doctor` says so. To get rid of the old token everywhere, remove it from your shell's
+**Fix:** update iroost and restart it (`q`, then `iroost open`). It now drops a refused token and uses
+`gh`'s own login, and `iroost doctor` says so. To get rid of the old token everywhere, remove it from your shell's
 startup files and run `tmux set-environment -g -u GITHUB_TOKEN`.
 
 ### The pull requests section is missing
 
-**Fix:** run `lzr1-panel prs`. It fetches them right now and says what is wrong. Usually:
+**Fix:** run `iroost prs`. It fetches them right now and says what is wrong. Usually:
 
 - **Not signed in to GitHub.** Run `gh auth login`.
 - **No `gh`.** Run `./install.sh` again; it installs it.
-- **You hid it.** Remove `LZR1_PRS=0` from your shell.
+- **You hid it.** Remove `IROOST_PRS=0` from your shell.
 
 Without `gh`, the panel finds your account from your SSH key (`ssh -T git@github.com`), but then it lists **public
 PRs only**, with no checks or reviews. `gh` is better.
@@ -357,14 +365,14 @@ These use `gh` with your account. The error shows in the panel until you press a
 
 ## Alerts
 
-`lzr1-panel notify` plays the tone and shows a sample notification, and `lzr1-panel doctor` says what alerts use on
+`iroost notify` plays the tone and shows a sample notification, and `iroost doctor` says what alerts use on
 this computer (its **alerts** section).
 
 ### No sound
 
 **Fix:** check, in order:
 
-- **The setting.** `LZR1_SOUND=0` turns the tone off. A file path plays that file: make sure it exists and is
+- **The setting.** `IROOST_SOUND=0` turns the tone off. A file path plays that file: make sure it exists and is
   readable.
 - **The player.** macOS uses `afplay`, which comes with the system. Linux uses `paplay` (PulseAudio or PipeWire),
   then `canberra-gtk-play`, then the terminal bell; install `pulseaudio-utils` (Debian/Ubuntu) to get `paplay`.
@@ -378,11 +386,11 @@ Without `terminal-notifier`, notifications come from **Script Editor** (through 
 **Fix:**
 
 - Open **System Settings → Notifications** and allow **Script Editor** (or **terminal-notifier**, if you installed
-  it). Then run `lzr1-panel notify`.
+  it). Then run `iroost notify`.
 - A **Focus** mode (Do Not Disturb, Work, …) hides them: allow the app there, or turn Focus off.
 - `brew install terminal-notifier` is optional: it groups notifications per session, so a new one replaces the
   session's last.
-- `LZR1_NOTIFY=0` turns them off.
+- `IROOST_NOTIFY=0` turns them off.
 
 ### No notification on Linux
 
@@ -393,7 +401,7 @@ Without `terminal-notifier`, notifications come from **Script Editor** (through 
   or `mako`.
 - The panel needs **`$DISPLAY`** or **`$WAYLAND_DISPLAY`**: over SSH, or in a tmux started before the desktop,
   there is none, and notifications are skipped. Run the panel from a terminal on the desktop.
-- `LZR1_NOTIFY=0` turns them off.
+- `IROOST_NOTIFY=0` turns them off.
 
 ### An alert came late or not at all
 
@@ -402,7 +410,7 @@ The panel samples every session every 15 seconds, so an alert can come up to 15 
 - A reply that starts and ends **between two samples** (idle, then idle again) makes no "finished" alert: the
   panel never saw it working. A question still alerts, since it stays on the screen.
 - The session you are looking at in the viewer gets no `✱`, but the tone and the notification still come.
-- Alerts only happen while a panel is open (`lzr1-panel list` never alerts). The first refresh after opening it
+- Alerts only happen while a panel is open (`iroost list` never alerts). The first refresh after opening it
   only learns the states, so a session already waiting does not alert again.
 
 ---
@@ -416,7 +424,7 @@ Some terminals keep the right button for themselves.
 **Fix:** press **`m`** on the row instead, or switch menus to the left button:
 
 ```sh
-export LZR1_MENU_BUTTON=left   # in ~/.zshenv
+export IROOST_MENU_BUTTON=left   # in ~/.zshenv
 ```
 
 ### After a row's menu, the first click on the footer does nothing
@@ -450,7 +458,7 @@ box-drawing characters (Ghostty's default does).
 
 ### The panel is too narrow or too wide
 
-**Fix:** `export LZR1_PANEL_WIDTH=64` (the default is 56).
+**Fix:** `export IROOST_PANEL_WIDTH=64` (the default is 56).
 
 ### No Remote Control link
 
@@ -463,8 +471,8 @@ signed in with a claude.ai account.
 
 ## Remote panel (in a browser)
 
-The panel in a browser over Tailscale (`w`, `[web]`, `lzr1-panel remote`) is described in [remote.md](remote.md).
-`lzr1-panel doctor` checks its pieces in its "remote" section. Each heading below is the exact text you see: in the
+The panel in a browser over Tailscale (`w`, `[web]`, `iroost remote`) is described in [remote.md](remote.md).
+`iroost doctor` checks its pieces in its "remote" section. Each heading below is the exact text you see: in the
 terminal, in `doctor`, in an alert, or on the page in the browser.
 
 ### `remote needs Tailscale (tailscale.com/download)`, or doctor's `no Tailscale`
@@ -472,7 +480,7 @@ terminal, in `doctor`, in an alert, or on the page in the browser.
 Neither `tailscale` is on your PATH nor, on macOS, the app is in `/Applications/Tailscale.app`. The installer never
 installs Tailscale: it is a system VPN app.
 
-**Fix:** install it from [tailscale.com/download](https://tailscale.com/download), sign in, then `lzr1-panel remote on`
+**Fix:** install it from [tailscale.com/download](https://tailscale.com/download), sign in, then `iroost remote on`
 again.
 
 ### `Tailscale is not connected (…)`, or doctor's `Tailscale is not running`
@@ -488,7 +496,7 @@ The remote's URL is `https://<machine>.<tailnet>.ts.net/<uuid>/`, which needs Ta
 tailnet. They are off by default.
 
 **Fix:** in the admin console, [DNS](https://login.tailscale.com/admin/dns) → **HTTPS Certificates** → enable (MagicDNS
-must be on too). Then `lzr1-panel remote on` again.
+must be on too). Then `iroost remote on` again.
 
 ### `Funnel is on for …`
 
@@ -498,7 +506,7 @@ for this machine's port 443, and turns the remote off if Funnel appears while it
 tailscale serve status --json, so cannot check Funnel is off: not publishing".
 
 **Fix:** `tailscale funnel status` shows what is public; `tailscale funnel reset` turns Funnel off (it also clears this
-machine's other `serve` settings). Then `lzr1-panel remote on`.
+machine's other `serve` settings). Then `iroost remote on`.
 
 ### `serve needs root on Linux`, or `tailscale serve failed: …`
 
@@ -506,7 +514,7 @@ On Linux `tailscaled` runs as root, and `tailscale serve` is refused to other us
 operator. `doctor` says it as "is not Tailscale's operator: tailscale serve needs root". Other `serve failed` reasons
 are Tailscale's own words, after the colon.
 
-**Fix:** once, `sudo tailscale set --operator=$USER`, then `lzr1-panel remote on`.
+**Fix:** once, `sudo tailscale set --operator=$USER`, then `iroost remote on`.
 
 ### `remote needs ttyd`, or doctor's `no ttyd`
 
@@ -523,7 +531,7 @@ Go's last line. A Go older than the one `gateway/go.mod` names (1.26) downloads 
 `GOTOOLCHAIN=local` is set or there is no network: then the build fails saying so.
 
 **Fix:** `brew install go` (Linux: your distribution's `golang` package, `golang-go` on Debian/Ubuntu). To see Go's
-whole message: `lzr1-panel remote build`. With an old Go, unset `GOTOOLCHAIN` (or set it to `auto`) and build again.
+whole message: `iroost remote build`. With an old Go, unset `GOTOOLCHAIN` (or set it to `auto`) and build again.
 
 ### `remote needs jq`, or `remote needs openssl`
 
@@ -533,15 +541,15 @@ whole message: `lzr1-panel remote build`. With an old Go, unset `GOTOOLCHAIN` (o
 
 ### `the gateway did not start: …`
 
-After the colon come the last lines of `~/.cache/lzr1-panel/remote/remote.log` and `ttyd.log`, which say why: ttyd
+After the colon come the last lines of `~/.cache/iroost/remote/remote.log` and `ttyd.log`, which say why: ttyd
 could not start, or the gateway refused its folder or its flags.
 
-**Fix:** read those lines, then `lzr1-panel remote off` and `lzr1-panel remote on` again. If the gateway is the
-problem, `lzr1-panel remote build` rebuilds it.
+**Fix:** read those lines, then `iroost remote off` and `iroost remote on` again. If the gateway is the
+problem, `iroost remote build` rebuilds it.
 
-### `takes hours, minutes or seconds, like 8h, 90m or 1h30m`, or `LZR1_REMOTE_PWLEN must be 12 or more`
+### `takes hours, minutes or seconds, like 8h, 90m or 1h30m`, or `IROOST_REMOTE_PWLEN must be 12 or more`
 
-A setting `remote on` cannot use: `LZR1_REMOTE_TTL`, `LZR1_REMOTE_IDLE` or `--ttl` must be like `8h`, `90m` or
+A setting `remote on` cannot use: `IROOST_REMOTE_TTL`, `IROOST_REMOTE_IDLE` or `--ttl` must be like `8h`, `90m` or
 `1h30m`, and more than 0; the password is at least 12 characters. `doctor` names the setting with "remote on refuses
 it".
 
@@ -554,22 +562,22 @@ not a login.
 
 **Fix:** answer with the logins exactly as Tailscale shows them (the admin console's Users page, or `tailscale
 status`), comma-separated: `you@example.com`, or `name@github` for a GitHub sign-in. Or skip the question:
-`lzr1-panel remote on --allow you@example.com`.
+`iroost remote on --allow you@example.com`.
 
-### `remote is already on (lzr1-panel remote off turns it off)`
+### `remote is already on (iroost remote off turns it off)`
 
 Only one remote at a time. The status above the message has its URL.
 
-**Fix:** `lzr1-panel remote url` copies the URL again, `lzr1-panel remote password` the password. To start over:
-`lzr1-panel remote off`, then `on` (a new URL and password).
+**Fix:** `iroost remote url` copies the URL again, `iroost remote password` the password. To start over:
+`iroost remote off`, then `on` (a new URL and password).
 
 ### The browser says "signed in to Tailscale as …, not allowed here"
 
 The page reached the gateway, but the device's Tailscale login (shown in the message) is not on the allowlist you gave
 `remote on`.
 
-**Fix:** sign that device in to Tailscale as an allowed login, or add the login: `lzr1-panel remote off`, then
-`lzr1-panel remote on` and add it to the answer (it is prefilled with the last one), or
+**Fix:** sign that device in to Tailscale as an allowed login, or add the login: `iroost remote off`, then
+`iroost remote on` and add it to the answer (it is prefilled with the last one), or
 `--allow you@example.com,other@example.com`. The URL changes.
 
 ### The browser says "no Tailscale identity: open this from a device signed in to Tailscale as an allowed user"
@@ -584,44 +592,44 @@ it is always refused.
 Five wrong passwords in a row from one login lock that login out for 15 minutes. Attempts while locked are refused
 without being checked, and still count toward the kill switch below. You get an alert, "LOGIN locked out until HH:MM".
 
-**Fix:** wait until the time shown. `lzr1-panel remote password` copies the right password on this computer. If it
-was not you, `lzr1-panel remote rotate` (a new password; it also ends the lock) or `lzr1-panel remote off`.
+**Fix:** wait until the time shown. `iroost remote password` copies the right password on this computer. If it
+was not you, `iroost remote rotate` (a new password; it also ends the lock) or `iroost remote off`.
 
 ### The browser says "too many wrong passwords: the remote panel was turned off"
 
 The kill switch: 20 wrong passwords in total, from any logins, turned the whole remote off. The alert says "turned off:
-20 wrong passwords", and `lzr1-panel remote status` says when.
+20 wrong passwords", and `iroost remote status` says when.
 
-**Fix:** see who tried in `~/.cache/lzr1-panel/remote/audit.log`. When you are sure it was you, `lzr1-panel remote on`
+**Fix:** see who tried in `~/.cache/iroost/remote/audit.log`. When you are sure it was you, `iroost remote on`
 again: a new URL and password.
 
 ### Back at the login form, though I logged in
 
 The session ended, and the page went back to the login form by itself:
 
-- **Idle logout:** nothing typed, clicked, pasted or resized in that browser for `LZR1_REMOTE_IDLE` (30 minutes by
+- **Idle logout:** nothing typed, clicked, pasted or resized in that browser for `IROOST_REMOTE_IDLE` (30 minutes by
   default). Watching a long Claude run does not count as input.
-- **A rotate** (`lzr1-panel remote rotate`, or the `w` menu on the computer) logged every browser out with a new
+- **A rotate** (`iroost remote rotate`, or the `w` menu on the computer) logged every browser out with a new
   password.
 
-**Fix:** log in again (after a rotate, with the new password: `lzr1-panel remote password`). To be logged out less
-often: `export LZR1_REMOTE_IDLE=2h` before `remote on`.
+**Fix:** log in again (after a rotate, with the new password: `iroost remote password`). To be logged out less
+often: `export IROOST_REMOTE_IDLE=2h` before `remote on`.
 
 ### A 502 after login: "the terminal is not answering (ttyd still starting or stopped)"
 
 The gateway let you in, but ttyd, which runs the browser's panel, does not answer. Right after `remote on` it may still
-be starting; otherwise it stopped, and `lzr1-panel remote status` says "ttyd: stopped (lzr1-panel remote off, then on)".
+be starting; otherwise it stopped, and `iroost remote status` says "ttyd: stopped (iroost remote off, then on)".
 
-**Fix:** reload once. Still there: `lzr1-panel remote off`, then `lzr1-panel remote on`.
+**Fix:** reload once. Still there: `iroost remote off`, then `iroost remote on`.
 
 ### The URL does not open at all
 
-The remote is off (it expires after `LZR1_REMOTE_TTL`, 8 hours by default), the URL is an old one (every `remote on`
+The remote is off (it expires after `IROOST_REMOTE_TTL`, 8 hours by default), the URL is an old one (every `remote on`
 makes a new one), or the device is not on your tailnet. While the remote turns itself off you get an alert:
 "expired, turned off", "the gateway stopped; turned off", "tailscale serve ended; turned off" (Tailscale was quit or
 disconnected).
 
-**Fix:** `lzr1-panel remote status` on the computer; turn it on again if it is off. On the other device, check that
+**Fix:** `iroost remote status` on the computer; turn it on again if it is off. On the other device, check that
 Tailscale is connected.
 
 ### `could not unpublish …`, or `remote: off, but its path may still be published`
@@ -637,7 +645,7 @@ route for good (`tailscale serve --set-path … off` answers "handler does not e
 config). The panel now uses the app's own binary and ends serve with SIGINT; if a route of an older version is still
 there, `remote off` runs `tailscale serve reset`, but only when that route is the only thing served.
 
-**Fix:** update the panel, then `lzr1-panel remote off`. If it still says so (Tailscale not running, or other serves
+**Fix:** update the panel, then `iroost remote off`. If it still says so (Tailscale not running, or other serves
 of yours on the machine), start Tailscale and run it again. By hand: `tailscale serve status --json` lists what is
 published (the plain `tailscale serve status` can say "No serve config" while a path is published), and
 `tailscale serve --https=443 --set-path /<uuid> off` removes a background one, and `tailscale serve reset` any (it
@@ -648,19 +656,19 @@ also drops your other serves).
 By design: a browser's own panel offers only the two copies and who is connected, so a browser never turns off or
 logs out the remote it is using.
 
-**Fix:** on the computer, press `w` in its panel, or run `lzr1-panel remote rotate` or `lzr1-panel remote off`.
+**Fix:** on the computer, press `w` in its panel, or run `iroost remote rotate` or `iroost remote off`.
 
 ### `rotate failed: …; remote is off`, or `it expires in under a minute`
 
 A rotate starts a new gateway; when it cannot start, the remote is turned off rather than left half on. In its last
 minute, a remote is not rotated.
 
-**Fix:** read the reason after "rotate failed:", then `lzr1-panel remote on`.
+**Fix:** read the reason after "rotate failed:", then `iroost remote on`.
 
-### `another lzr1-panel remote command is still running after 30 s (or … cannot be locked)`
+### `another iroost remote command is still running after 30 s (or … cannot be locked)`
 
 `remote on`, `off` and `rotate`, and the check every other remote command makes first, run one at a time (a lock in
-`~/.cache/lzr1-panel/remote/lock`), so a `status` or a second panel's `w` during a rotate waits for it instead of
+`~/.cache/iroost/remote/lock`), so a `status` or a second panel's `w` during a rotate waits for it instead of
 taking the old, stopped gateway for a dead remote. This one waited 30 s, though a `remote on` or `rotate` holds the
 lock for seconds (never during the allowlist prompt): another remote command is stuck, likely waiting on Tailscale.
 
@@ -683,8 +691,8 @@ session on this computer is the exception: its copies land on both). More in
 
 Sprites are the default, and the panel falls back to text tags when the terminal cannot display real images (such as
 macOS `Terminal.app` or inside `tmux`), or when `curl` and ImageMagick are missing. Check that the footer's `[≡ menu]`
-is not on text or off, and that `LZR1_POKEMON` is not set to something else in your shell. **Fix:** open the panel in
-**Ghostty** (or **kitty**, outside tmux) for real PNG sprites, and run `lzr1-panel doctor` to check that `curl` and
+is not on text or off, and that `IROOST_POKEMON` is not set to something else in your shell. **Fix:** open the panel in
+**Ghostty** (or **kitty**, outside tmux) for real PNG sprites, and run `iroost doctor` to check that `curl` and
 ImageMagick (`magick`) are installed.
 
 ### The sprites are blocky, or blurry in macOS Terminal while clear in Ghostty
@@ -697,26 +705,26 @@ cannot display real PNG images, and separates `\e[0m` from foreground colors in 
 never leaves black cutouts on the selected row.
 
 **Fix:** open the panel in **Ghostty** (outside tmux) for full-resolution PNG sprites; in **macOS Terminal**, clean text
-tags show automatically (or set `LZR1_POKEMON_IMAGES=halfblocks` in `~/.zshenv` if you specifically want half blocks).
+tags show automatically (or set `IROOST_POKEMON_IMAGES=halfblocks` in `~/.zshenv` if you specifically want half blocks).
 
 ### A Pokémon stays a Poké Ball
 
 Its art is not cut yet: the panel cuts at most three per refresh, in the background. A failed download (no network,
 GitHub unreachable) is tried again after a minute. **Fix:** wait a refresh or two; `r` refreshes now. Still a ball after
-a few minutes: run `lzr1-panel _art 25` (the Pokémon's number) and read what it prints, or `lzr1-panel doctor`.
+a few minutes: run `iroost _art 25` (the Pokémon's number) and read what it prints, or `iroost doctor`.
 
 ### There is no strip in the browser
 
 It needs the remote to be on **and** to know the state directory, which a gateway started before this feature does not.
-**Fix:** `lzr1-panel remote off`, then `remote on` again (it rebuilds the gateway). Then check that sessions exist
-(`~/.cache/lzr1-panel/web-sessions.json` appears after the panel's next refresh while the remote is on) and that the
+**Fix:** `iroost remote off`, then `remote on` again (it rebuilds the gateway). Then check that sessions exist
+(`~/.cache/iroost/web-sessions.json` appears after the panel's next refresh while the remote is on) and that the
 page was reloaded.
 
 ### Clicking a Pokémon does nothing in the browser
 
 The click names the panel by the `id=N` in its terminal title, which the panel sets when the browser attaches. **Fix:**
 reload the page. If the layout was started before this feature, quit the panel in the browser (`q`) and reload. Not
-working in a very wide window with `LZR1_NARROW=0`: that setting turns the title hooks off.
+working in a very wide window with `IROOST_NARROW=0`: that setting turns the title hooks off.
 
 ## Starting over
 
@@ -725,19 +733,19 @@ working in a very wide window with `LZR1_NARROW=0`: that setting turns the title
 ./install.sh               # installs everything again
 ```
 
-Your profiles stay in `~/.config/lzr1-panel/profiles/`. Remove one with `lzr1-panel profile remove NAME`.
+Your profiles stay in `~/.config/iroost/profiles/`. Remove one with `iroost profile remove NAME`.
 
 ### Two sessions in the same folder
 
 Right-click a session and pick **another Opus / Sonnet / Agy / opencode session in this folder**, or **new terminal in
 this folder (no agent)**. A name already in use becomes `NAME-2`, `NAME-3`..., and `NAME-N` opens in NAME's folder,
 so each one is its own tmux session. A terminal row shows `shell` and is always idle (`·`): the panel cannot read
-what runs in it. `lzr1-panel start PROFILE term NAME` does the same from a shell (`LZR1_DIR=/folder` picks the folder).
+what runs in it. `iroost start PROFILE term NAME` does the same from a shell (`IROOST_DIR=/folder` picks the folder).
 
 ### The Spotify block (now playing) is missing
 
 It sits above `[≡ menu]` and shows only when the **Spotify desktop app** (macOS) is running, signed in and has a track
-loaded or playing: a signed-out or idle app has none, so nothing is shown. Nothing to turn on; `LZR1_SPOTIFY=off` in your
+loaded or playing: a signed-out or idle app has none, so nothing is shown. Nothing to turn on; `IROOST_SPOTIFY=off` in your
 shell hides it.
 
 - **Never shows.** Start Spotify and play something. The panel never starts Spotify itself. The first time, macOS may
@@ -750,7 +758,7 @@ shell hides it.
 
 The refresh button fetches the list again from GitHub. It used to delete the saved list first, so one failed fetch
 (offline, GitHub rate limit, a stale `GITHUB_TOKEN`) left the section empty. Now the last list stays on screen until
-GitHub answers with a new one. If it stays old, run `lzr1-panel doctor`: it shows which GitHub account the panel uses.
+GitHub answers with a new one. If it stays old, run `iroost doctor`: it shows which GitHub account the panel uses.
 
 ### The panel freezes, or the machine's load climbs after a few panels
 
@@ -758,8 +766,8 @@ fzf ignores clicks and keys while the panel builds its list, and older versions 
 panel closed from its tmux layout never ended (its `_panel`, `_quit` and `_spotpoll` stayed alive, each asking Spotify
 for the track every 2 seconds, with no limit on the wait), a Spotify that did not answer piled up `osascript` calls, and
 a refresh waited for the slowest machine and for GitHub. Now a quitting panel flags its pollers to stop, Spotify gets 3
-seconds, a machine 8, the pull requests refresh on their own, and `lzr1-panel open` ends panels a dead layout left.
+seconds, a machine 8, the pull requests refresh on their own, and `iroost open` ends panels a dead layout left.
 
-**Fix:** update the panel (`git pull`) and run `lzr1-panel open`: it ends the old ones. By hand:
-`ps -axo pid,ppid,command | grep 'lzr1-panel _'` shows them, and a `_panel` whose parent (`ppid`) is `1` is dead:
-`kill -9` it. `pkill -f 'lzr1-panel _spotpoll'` ends the Spotify pollers.
+**Fix:** update the panel (`git pull`) and run `iroost open`: it ends the old ones. By hand:
+`ps -axo pid,ppid,command | grep 'iroost _'` shows them, and a `_panel` whose parent (`ppid`) is `1` is dead:
+`kill -9` it. `pkill -f 'iroost _spotpoll'` ends the Spotify pollers.

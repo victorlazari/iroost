@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lzr1 Menu Options</title>
+<title>iroost Menu Options</title>
 <!-- Template: ring:visualizing standard.html -->
-<!-- Artifact brief: Audience: the user choosing what the right-click menu on a session row and on a pull request row looks like in lzr1-panel, and which actions it offers. Physical scene: the 56-column panel in Ghostty, where fzf replaces the list with the menu until a line is picked. Source facts: lzr1-panel already has view, focus, Ghostty tab, Remote Control link, end session and new session; tmux can rename sessions and send keys; gh can open, check out, mark ready, merge and re-run checks of a PR; a session's branch can match one of the user's open PRs. Entities: sessions, pull requests, the five menu styles, the action catalogue. Hierarchy: the five styles first, then every possible action with its source. Message: pick a style 1 to 5 and the actions to keep. Non-invention boundary: sessions and PRs are sample values; every action maps to a command named in the catalogue. -->
+<!-- Artifact brief: Audience: the user choosing what the right-click menu on a session row and on a pull request row looks like in iroost, and which actions it offers. Physical scene: the 56-column panel in Ghostty, where fzf replaces the list with the menu until a line is picked. Source facts: iroost already has view, focus, Ghostty tab, Remote Control link, end session and new session; tmux can rename sessions and send keys; gh can open, check out, mark ready, merge and re-run checks of a PR; a session's branch can match one of the user's open PRs. Entities: sessions, pull requests, the five menu styles, the action catalogue. Hierarchy: the five styles first, then every possible action with its source. Message: pick a style 1 to 5 and the actions to keep. Non-invention boundary: sessions and PRs are sample values; every action maps to a command named in the catalogue. -->
 <!-- Visual thesis: each style shows the same two menus side by side, session left and PR right, at the panel's real width; "another example" redraws them with other sample rows. -->
 <!-- Design choices: 1) session and PR menus paired per style so the styles compare on the same content; 2) destructive actions (end, close, merge) set apart and red in every style; 3) the catalogue table names the command behind each action, so nothing in a menu is decorative; 4) menus drawn as fzf draws them, in monospace, with the yellow pointer on the first line. -->
 <!-- ============================================
@@ -502,15 +502,15 @@ table.src tr.grp td{color:var(--alf-text);font-weight:600;background:var(--alf-s
   </header>
 
 <section class="animate" style="--i:0">
-<h1>lzr1 panel: right-click menus</h1>
-<p class="sub">Five styles for the menu a right-click opens (or a left-click, with <code>LZR1_MENU_BUTTON=left</code>; <code>m</code> opens it from the keyboard). Each style shows the menu of a <b>session</b> on the left and of a <b>pull request</b> on the right, as fzf draws it in the 56-column panel. Style 1, plain list, is the one lzr1-panel uses (chosen on 28 Oct 2026). Hover a line to move the pointer. The rows are <b>sample values</b>: “another example” redraws every menu with other sessions and PRs, so you can see how each style copes with long names, waiting sessions, failing checks and drafts.</p>
+<h1>iroost: right-click menus</h1>
+<p class="sub">Five styles for the menu a right-click opens (or a left-click, with <code>IROOST_MENU_BUTTON=left</code>; <code>m</code> opens it from the keyboard). Each style shows the menu of a <b>session</b> on the left and of a <b>pull request</b> on the right, as fzf draws it in the 56-column panel. Style 1, plain list, is the one iroost uses (chosen on 28 Oct 2026). Hover a line to move the pointer. The rows are <b>sample values</b>: “another example” redraws every menu with other sessions and PRs, so you can see how each style copes with long names, waiting sessions, failing checks and drafts.</p>
 </section>
 <div class="btnrow animate" style="--i:1"><button type="button" id="shuffle">another example ↻</button><span id="ex"></span></div>
 <div class="opts" id="opts"></div>
 <section class="animate" style="--i:8;margin-top:34px">
 <h2>Every action a menu could offer</h2>
 <div class="wrapt"><table class="src">
-<thead><tr><th>Action</th><th>How lzr1-panel would do it</th><th>Note</th></tr></thead>
+<thead><tr><th>Action</th><th>How iroost would do it</th><th>Note</th></tr></thead>
 <tbody>
 <tr class="grp"><td colspan="3">Session</td></tr>
 <tr><td>view it here</td><td>today's click: <code>_select</code></td><td></td></tr>
@@ -521,14 +521,14 @@ table.src tr.grp td{color:var(--alf-text);font-weight:600;background:var(--alf-s
 <tr><td>open its repository on GitHub</td><td><code>git remote get-url origin</code> in its folder</td><td></td></tr>
 <tr><td>copy the attach command</td><td><code>ssh HOST -t tmux attach -t =NAME</code></td><td>for another terminal</td></tr>
 <tr><td>open its folder</td><td><code>open DIR</code></td><td>local machines only</td></tr>
-<tr><td>new session in the same repository</td><td><code>lzr1-panel start</code> with a numbered name</td><td></td></tr>
+<tr><td>new session in the same repository</td><td><code>iroost start</code> with a numbered name</td><td></td></tr>
 <tr><td>interrupt Claude (Esc)</td><td><code>tmux send-keys Escape</code></td><td>when working</td></tr>
 <tr><td>rename</td><td><code>tmux rename-session</code></td><td></td></tr>
 <tr><td>end the session</td><td>today's <code>x</code>, asks first</td><td>destructive</td></tr>
 <tr class="grp"><td colspan="3">Pull request</td></tr>
 <tr><td>open in the browser / its checks / its files</td><td>its URL, <code>/checks</code>, <code>/files</code></td><td></td></tr>
 <tr><td>copy its link / its branch</td><td><code>pbcopy</code> (or OSC 52)</td><td></td></tr>
-<tr><td>new session on its repository</td><td><code>lzr1-panel start PROFILE opus REPO</code></td><td>picks the machine if several</td></tr>
+<tr><td>new session on its repository</td><td><code>iroost start PROFILE opus REPO</code></td><td>picks the machine if several</td></tr>
 <tr><td>ask Claude to review it</td><td>a new session started with “review PR #N”</td><td></td></tr>
 <tr><td>ask Claude to fix the failing checks</td><td>a new session started with “fix the failing checks of PR #N”</td><td>when checks fail</td></tr>
 <tr><td>re-run failed checks</td><td><code>gh run rerun --failed</code></td><td>when checks fail</td></tr>
@@ -569,11 +569,11 @@ var SS=[{n:"lerian-clients",p:"oracle-sessions",st:"w",m:"opus",age:"12m",task:"
  {n:"midaz",p:"macbook-pro-sessions",st:"q",m:"opus",age:"4m",wait:"Do you want to run make test?",br:"feat/fees",ch:7,pr:1412},
  {n:"erebor",p:"oracle-sessions",st:"i",m:"sonnet",age:"2h",task:"Review the tmux layer",br:"main",ch:0},
  {n:"lerian-proxmox-infrastructure",p:"macbook-pro-sessions",st:"w",m:"sonnet",age:"38m",task:"Terraform for the new storage pool",br:"feat/ceph-pool-with-a-long-name",ch:12},
- {n:"lzr1-panel",p:"macbook-pro-sessions",st:"i",m:"opus",age:"5m",task:"Your PRs under the sessions",br:"feat/prs",ch:2,pr:2}];
+ {n:"iroost",p:"macbook-pro-sessions",st:"i",m:"opus",age:"5m",task:"Your PRs under the sessions",br:"feat/prs",ch:2,pr:2}];
 var PS=[{repo:"LerianStudio/lerian-clients",n:906,t:"fix(oncall): guard ownerless VoIP providers",br:"fix/voip-owner",g:"q",rev:"checks running · review required",age:"2h"},
  {repo:"LerianStudio/midaz",n:1412,t:"feat(fees): fee rules per ledger",br:"feat/fees",g:"bad",rev:"checks failed",age:"1d"},
  {repo:"LerianStudio/midaz",n:1398,t:"chore: bump lib-commons",br:"chore/lib-commons",g:"ok",rev:"checks passed · approved",age:"3d"},
- {repo:"victorlazari/lzr1-panel",n:2,t:"Panel: your PRs under the sessions, with right-click menus everywhere",br:"feat/prs",g:"i",draft:1,rev:"draft",age:"5m"},
+ {repo:"victorlazari/iroost",n:2,t:"Panel: your PRs under the sessions, with right-click menus everywhere",br:"feat/prs",g:"i",draft:1,rev:"draft",age:"5m"},
  {repo:"LerianStudio/matcher",n:311,t:"feat: tolerance rules for PSP reconciliation",br:"feat/tolerance",g:"q",rev:"review required",age:"6h"}];
 var si=0,pi=0;
 var G={w:'<span class="w">▶</span>',q:'<span class="q">⧗</span>',i:'<span class="i">·</span>'},PG={ok:'<span class="ok">✓</span>',bad:'<span class="bad">✗</span>',q:'<span class="q">⧗</span>',i:'<span class="i">◌</span>'};

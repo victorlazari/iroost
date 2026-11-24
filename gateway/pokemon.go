@@ -16,9 +16,9 @@ import (
 // A click on a Pokémon asks the panel it belongs to to show that session, through the same .follow file the panel's
 // own ticker already watches. Nothing here starts, ends or types into a session.
 const (
-	sessionsPath  = "lzr1-sessions"
-	pickPath      = "lzr1-pick"
-	pokemonPrefix = "lzr1-pokemon/"
+	sessionsPath  = "iroost-sessions"
+	pickPath      = "iroost-pick"
+	pokemonPrefix = "iroost-pokemon/"
 
 	sessionsFile = "web-sessions.json"
 	artDir       = "pokemon-art"
@@ -192,7 +192,7 @@ func (s *server) servePick(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// servePokemon serves one file of one Pokémon's art: lzr1-pokemon/NNNN/NAME, NAME from a short list, a regular file
+// servePokemon serves one file of one Pokémon's art: iroost-pokemon/NNNN/NAME, NAME from a short list, a regular file
 // under the state directory's pokemon-art (never a link out of it).
 func (s *server) servePokemon(w http.ResponseWriter, r *http.Request, rest string) {
 	if !methodGetOnly(w, r) {

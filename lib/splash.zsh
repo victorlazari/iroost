@@ -1,61 +1,60 @@
-# lzr1-panel splash, "BIOS boot": a retro boot log that checks your real machines (each profile turns [ OK ] with its
-# sessions and repositories as it answers), then the 3D LZR1 logo slams in with a screen shake, its second word
-# switching between TECH and PANEL. A status line and a progress bar sit at the bottom. Sized to the terminal on
-# every frame; a small terminal gets a short log and a one-line logo. About 5s; any key skips. LZR1_SPLASH=0 skips
-# it everywhere, LZR1_SPLASH_SECONDS changes its length.
+# iroost splash, "BIOS boot": a retro boot log that checks your real machines (each profile turns [ OK ] with its
+# sessions and repositories as it answers), then the 3D IROOST logo slams in with a screen shake, its second word
+# switching between STACK and NEST. A status line and a progress bar sit at the bottom. Sized to the terminal on
+# every frame; a small terminal gets a short log and a one-line logo. About 5s; any key skips. IROOST_SPLASH=0 skips
+# it everywhere, IROOST_SPLASH_SECONDS changes its length.
 #
-# Sourced by bin/lzr1-panel, which calls: lzr1_splash [open|install]
+# Sourced by bin/iroost, which calls: iroost_splash [open|install]
 
 zmodload zsh/datetime
 
-typeset -gA LZR1_GLYPH=(
-  L $'██╗     \n██║     \n██║     \n██║     \n███████╗\n╚══════╝'
-  Z $'███████╗\n╚══███╔╝\n  ███╔╝ \n ███╔╝  \n███████╗\n╚══════╝'
+typeset -gA IROOST_GLYPH=(
+  I $'██╗\n██║\n██║\n██║\n██║\n╚═╝'
   R $'██████╗ \n██╔══██╗\n██████╔╝\n██╔══██╗\n██║  ██║\n╚═╝  ╚═╝'
-  1 $' ██╗\n███║\n╚██║\n ██║\n ██║\n ╚═╝'
+  O $' ██████╗ \n██╔═══██╗\n██║   ██║\n██║   ██║\n╚██████╔╝\n ╚═════╝ '
+  S $'███████╗\n██╔════╝\n███████╗\n╚════██║\n███████║\n╚══════╝'
   T $'████████╗\n╚══██╔══╝\n   ██║   \n   ██║   \n   ██║   \n   ╚═╝   '
-  E $'███████╗\n██╔════╝\n█████╗  \n██╔══╝  \n███████╗\n╚══════╝'
-  C $' ██████╗\n██╔════╝\n██║     \n██║     \n╚██████╗\n ╚═════╝'
-  H $'██╗  ██╗\n██║  ██║\n███████║\n██╔══██║\n██║  ██║\n╚═╝  ╚═╝'
-  P $'██████╗ \n██╔══██╗\n██████╔╝\n██╔═══╝ \n██║     \n╚═╝     '
   A $' █████╗ \n██╔══██╗\n███████║\n██╔══██║\n██║  ██║\n╚═╝  ╚═╝'
+  C $' ██████╗\n██╔════╝\n██║     \n██║     \n╚██████╗\n ╚═════╝'
+  K $'██╗  ██╗\n██║ ██╔╝\n█████╔╝ \n██╔═██╗ \n██║  ██╗\n╚═╝  ╚═╝'
+  E $'███████╗\n██╔════╝\n█████╗  \n██╔══╝  \n███████╗\n╚══════╝'
   N $'███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝'
 )
 
-# _lzr1_word WORD WIDTH: the word's 6 rows, centered in WIDTH, into reply
-_lzr1_word() {
+# _iroost_word WORD WIDTH: the word's 6 rows, centered in WIDTH, into reply
+_iroost_word() {
   local word=$1 width=$2 r c
   local -a rows=( '' '' '' '' '' '' ) g
   for c in ${(s::)word}; do
-    g=( "${(@f)LZR1_GLYPH[$c]}" )
-    for r in {1..6}; do rows[r]+="${g[r]} "; done
+    g=( "${(@f)IROOST_GLYPH[$c]}" )
+    for r in {1..6}; do rows[r]+="${g[r]}"; done
   done
-  local w=$(( ${#rows[1]} - 1 )) pad
+  local w=${#rows[1]} pad
   pad=$(( (width - w) / 2 ))
   reply=()
-  for r in {1..6}; do reply+=( "${(l:pad:: :)}${rows[r]%?}${(l:width - pad - w:: :)}" ); done
+  for r in {1..6}; do reply+=( "${(l:pad:: :)}${rows[r]}${(l:width - pad - w:: :)}" ); done
 }
 
-# _lzr1_dots LABEL VALUE WIDTH: "LABEL ........ VALUE" padded to WIDTH, into REPLY
-_lzr1_dots() {
+# _iroost_dots LABEL VALUE WIDTH: "LABEL ........ VALUE" padded to WIDTH, into REPLY
+_iroost_dots() {
   local n=$(( $3 - ${#1} - ${#2} - 2 )); (( n < 3 )) && n=3
   REPLY="$1 ${(l:n::.:)} $2"
 }
 
-lzr1_splash() {
-  [[ ${LZR1_SPLASH:-1} == 0 || ! -t 1 ]] && return 0
+iroost_splash() {
+  [[ ${IROOST_SPLASH:-1} == 0 || ! -t 1 ]] && return 0
   local mode=${1:-open}
   # Box-drawing widths need a UTF-8 locale.
   if [[ ${LC_ALL:-${LC_CTYPE:-$LANG}} != *(#i)utf(-|)8* ]]; then
     local LC_ALL; [[ $OSTYPE == darwin* ]] && LC_ALL=en_US.UTF-8 || LC_ALL=C.UTF-8
   fi
 
-  local W=46 sfile=$(mktemp) dur=${LZR1_SPLASH_SECONDS:-5} boot
+  local W=46 sfile=$(mktemp) dur=${IROOST_SPLASH_SECONDS:-5} boot
   boot=$(( dur * 0.48 ))
-  local -a lzr tech panel names=( $(profiles) )
-  _lzr1_word LZR1 $W; lzr=( $reply )
-  _lzr1_word TECH $W; tech=( $reply )
-  _lzr1_word PANEL $W; panel=( $reply )
+  local -a iroost stack nest names=( $(profiles) )
+  _iroost_word IROOST $W; iroost=( $reply )
+  _iroost_word STACK $W; stack=( $reply )
+  _iroost_word NEST $W; nest=( $reply )
 
   # Real work behind the log: reach every profile (this also opens the SSH connections the panel then reuses).
   if [[ $mode == open ]]; then
@@ -128,31 +127,31 @@ lzr1_splash() {
       # ---- the boot log --------------------------------------------------------------------------------------------
       log=() logc=()
       lw=$(( cols - 6 )); (( lw > 64 )) && lw=64
-      log+=( "LZR1 BIOS v${VERSION:-0}  (c) lzr1 tech" ) logc+=( head )
+      log+=( "IROOST BIOS v${VERSION:-0}  (c) iroost" ) logc+=( head )
       log+=( "CPU: $arch · host: $host · zsh $ZSH_VERSION" ) logc+=( 250 )
       mem=$(( t < 0.6 ? t / 0.6 * 640 : 640 )); mem=${mem%.*}
-      _lzr1_dots "Memory test" "${mem}K$( (( mem >= 640 )) && print ' OK')" $lw; log+=( "$REPLY" ) logc+=( 250 )
-      _lzr1_dots "Detecting profiles" "$#names" $lw; log+=( "$REPLY" ) logc+=( 250 )
+      _iroost_dots "Memory test" "${mem}K$( (( mem >= 640 )) && print ' OK')" $lw; log+=( "$REPLY" ) logc+=( 250 )
+      _iroost_dots "Detecting profiles" "$#names" $lw; log+=( "$REPLY" ) logc+=( 250 )
       if [[ $mode == open ]]; then
         for p in $names; do
           v=${res[$p]}
           if [[ -z $v ]]; then
-            _lzr1_dots "  $p" "[ ${spin[$(( frame % 10 + 1 ))]}${spin[$(( (frame + 5) % 10 + 1 ))]} ]" $lw; logc+=( 250 )
+            _iroost_dots "  $p" "[ ${spin[$(( frame % 10 + 1 ))]}${spin[$(( (frame + 5) % 10 + 1 ))]} ]" $lw; logc+=( 250 )
           elif [[ $v == ok* ]]; then
             vv=( ${=v} )
-            _lzr1_dots "  $p" "${vv[2]} session$( (( vv[2] == 1 )) || print s) · ${vv[3]} repos  [ OK ]" $lw; logc+=( ok )
+            _iroost_dots "  $p" "${vv[2]} session$( (( vv[2] == 1 )) || print s) · ${vv[3]} repos  [ OK ]" $lw; logc+=( ok )
           else
-            _lzr1_dots "  $p" "offline, skipped  [SKIP]" $lw; logc+=( fail )
+            _iroost_dots "  $p" "offline, skipped  [SKIP]" $lw; logc+=( fail )
           fi
           log+=( "$REPLY" )
         done
-        _lzr1_dots "Mounting repositories" "$nrep" $lw; log+=( "$REPLY" ) logc+=( 250 )
+        _iroost_dots "Mounting repositories" "$nrep" $lw; log+=( "$REPLY" ) logc+=( 250 )
       else
-        for p in "the lzr1-panel command" "the Claude Code skill" "the shell hook"; do
-          _lzr1_dots "Installing $p" "[ OK ]" $lw; log+=( "$REPLY" ) logc+=( ok )
+        for p in "the iroost command" "the Claude Code skill" "the shell hook"; do
+          _iroost_dots "Installing $p" "[ OK ]" $lw; log+=( "$REPLY" ) logc+=( ok )
         done
       fi
-      _lzr1_dots "Starting tmux" "ok" $lw; log+=( "$REPLY" ) logc+=( 250 )
+      _iroost_dots "Starting tmux" "ok" $lw; log+=( "$REPLY" ) logc+=( 250 )
       log+=( "Press any key to skip" ) logc+=( 240 )
 
       # Lines appear one by one; only as many as fit above the status area.
@@ -176,8 +175,8 @@ lzr1_splash() {
       s=$(( t - boot )) shake=0
       if (( s < 0.6 )); then shake=$(( (RANDOM % 5 - 2) * (1 - s / 0.6) )); shake=${shake%.*}; fi
       phase=$(( s / 1.6 )); wi=$(( ${phase%.*} % 2 ))
-      if (( wi )); then word=( $panel ); else word=( $tech ); fi
-      logo=( $lzr '' $word )
+      if (( wi )); then word=( $nest ); else word=( $stack ); fi
+      logo=( $iroost '' $word )
       top=$(( (rows - 4 - 15) / 2 + (s < 0.3 ? shake : 0) )); (( top < 1 )) && top=1
       left=$(( (cols - W) / 2 + 1 + shake )); (( left < 1 )) && left=1
       for r in {1..13}; do
@@ -201,7 +200,7 @@ lzr1_splash() {
     else
       # ---- small terminal: one line of logo ------------------------------------------------------------------------
       sp=$(( (t - boot) / 1.6 ))
-      if (( ${sp%.*} % 2 )); then small="▟ LZR1 ▸ PANEL ▙"; else small="▟ LZR1 ▸ TECH ▙"; fi
+      if (( ${sp%.*} % 2 )); then small="▟ IROOST ▸ NEST ▙"; else small="▟ IROOST ▸ STACK ▙"; fi
       top=$(( rows / 2 - 2 )); (( top < 1 )) && top=1
       left=$(( (cols - ${#small}) / 2 )); (( left < 0 )) && left=0
       scr[top]="${(l:left:: :)}\e[1;38;5;${grad[$(( frame / 3 % 12 + 1 ))]}m${small}\e[0m"

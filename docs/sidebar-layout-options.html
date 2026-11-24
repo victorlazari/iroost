@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lzr1-panel — Interactive Sidebar Layout & Drag Templates</title>
+<title>iroost — Interactive Sidebar Layout & Drag Templates</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
@@ -369,7 +369,7 @@
         <path d="M9 8h4v12h10v4H9V8z" fill="#1C1B18"/>
       </svg>
       <div>
-        <div class="brand-title">lzr1-panel — Interactive Sidebar Layout &amp; Drag Templates</div>
+        <div class="brand-title">iroost — Interactive Sidebar Layout &amp; Drag Templates</div>
         <div class="brand-sub">Draggable section heights · Per-section scrollbars · Reorderable profiles &amp; spacing</div>
       </div>
     </div>
@@ -420,7 +420,7 @@
         <div class="side">
           <div class="t-top">
             <span id="a-top-stat">7 sessions · 2▶ 1⏳ 4·</span>
-            <span class="c-cyan">lzr1</span>
+            <span class="c-cyan">iroost</span>
           </div>
 
           <!-- Upper scrollable zone: Profiles & Sessions -->
@@ -459,7 +459,7 @@
           <div class="telemetry">
             <div class="telemetry-title">
               <span>Live Layout State (Option A)</span>
-              <span class="c-dim">~/.config/lzr1-panel/layout.conf</span>
+              <span class="c-dim">~/.config/iroost/layout.conf</span>
             </div>
             <pre id="a-telemetry"></pre>
           </div>
@@ -476,7 +476,7 @@
         <span class="badge">Per-Profile Scrollbar</span>
       </div>
       <p class="desc">
-        Treats each profile (<code>lerian</code>, <code>lzr1-macbook-air</code>, <code>oracle-sessions</code>) and <code>pull requests</code> as an independent <strong>card</strong> you can drag into any order (even putting PRs between two profiles!), drag each card's bottom edge (`═══`) to cap its height with its own mini scrollbar, and drag the gap between cards.
+        Treats each profile (<code>lerian</code>, <code>iroost-macbook-air</code>, <code>oracle-sessions</code>) and <code>pull requests</code> as an independent <strong>card</strong> you can drag into any order (even putting PRs between two profiles!), drag each card's bottom edge (`═══`) to cap its height with its own mini scrollbar, and drag the gap between cards.
       </p>
       <div class="hint-bar">
         <span class="hint-chip"><b>Drag ⠿</b> Reorder any profile or PR card</span>
@@ -488,7 +488,7 @@
         <div class="side">
           <div class="t-top">
             <span>modular cards · drag any block</span>
-            <span class="c-cyan">lzr1</span>
+            <span class="c-cyan">iroost</span>
           </div>
 
           <div class="scroll-zone" id="b-main-zone" style="flex:1; padding: 6px 8px 6px 2px;">
@@ -548,7 +548,7 @@
               <button class="gap-btn" onclick="setCGap(3)">3L</button>
               <button class="gap-btn" onclick="setCGap(5)">5L</button>
             </span>
-            <span class="c-cyan">lzr1</span>
+            <span class="c-cyan">iroost</span>
           </div>
 
           <div class="scroll-zone" id="c-sess-zone" style="flex:1; min-height:80px;">
@@ -617,7 +617,7 @@
         <div class="side">
           <div class="t-top">
             <span>native ANSI cell preview</span>
-            <span class="c-cyan">lzr1</span>
+            <span class="c-cyan">iroost</span>
           </div>
 
           <!-- Interactive terminal toolbar simulating row clicks / keys -->
@@ -641,10 +641,10 @@
 
         <div class="view">
           <div>
-            <div class="c-dim" style="font-size:11px;margin-bottom:8px;">how it works in bin/lzr1-panel</div>
+            <div class="c-dim" style="font-size:11px;margin-bottom:8px;">how it works in bin/iroost</div>
             <div class="c-ink" style="margin-bottom:6px;">Zero-Dependency Zsh + fzf Implementation</div>
             <div style="font-size:11.5px;color:#9aa5b4;line-height:1.55;">
-              1. <strong>Profile Order &amp; Gap</strong>: Saved in <code>~/.config/lzr1-panel/layout.conf</code> (<code>order=lerian,lzr1-macbook-air</code>, <code>profile_gap=2</code>). Clicking a profile header or using <code>[≡ menu] → Organize Profiles</code> moves it up/down or adjusts spacing.<br>
+              1. <strong>Profile Order &amp; Gap</strong>: Saved in <code>~/.config/iroost/layout.conf</code> (<code>order=lerian,iroost-macbook-air</code>, <code>profile_gap=2</code>). Clicking a profile header or using <code>[≡ menu] → Organize Profiles</code> moves it up/down or adjusts spacing.<br>
               2. <strong>PR Section Position &amp; Height</strong>: Controlled by <code>pr_gap</code> (blank rows pushing PRs down) and <code>pr_height</code> (max visible PRs before scrolling).<br>
               3. <strong>Per-Section Scrollbar</strong>: When PRs or sessions exceed their viewport window, right-column cells render <code>█</code> (thumb) and <code>░</code> (track) with <code>▲ scroll up</code> / <code>▼ scroll down</code> rows.
             </div>
@@ -699,14 +699,14 @@
         <td><strong>Option D</strong><br><span class="c-dim">Native TUI Cells</span></td>
         <td><code>pr_gap</code> + <code>pr_height</code> rows with clickable <code>▲/▼</code> &amp; drag</td>
         <td>Unicode <code>█</code> thumb over <code>░</code> track rendered in right-most column</td>
-        <td>Persisted in <code>~/.config/lzr1-panel/layout.conf</code></td>
-        <td>Exact preview of how `bin/lzr1-panel` renders inside `fzf` in Ghostty &amp; Terminal.app</td>
+        <td>Persisted in <code>~/.config/iroost/layout.conf</code></td>
+        <td>Exact preview of how `bin/iroost` renders inside `fzf` in Ghostty &amp; Terminal.app</td>
       </tr>
     </tbody>
   </table>
 
   <footer class="gen">
-    <span>lzr1-panel · Left Sidebar Layout &amp; Drag Templates</span>
+    <span>iroost · Left Sidebar Layout &amp; Drag Templates</span>
     <span>Generated with Ring · Lerian Studio</span>
   </footer>
 </div>
@@ -728,17 +728,17 @@
           ]
         },
         {
-          id: 'lzr1-macbook-air', type: 'local', status: 'online', gap: 18, maxH: 180,
+          id: 'iroost-macbook-air', type: 'local', status: 'online', gap: 18, maxH: 180,
           sessions: [
-            { name: 'lzr1-herdr', agent: 'agy', age: '15s', state: '·', color: 'c-dim', task: 'no task yet', branch: 'master · lzr1-herdr' },
-            { name: 'lzr1-panel', agent: 'agy', age: '11s', state: '●', color: 'c-green', task: 'Sidebar draggable layout templates', branch: 'main · lzr1-panel', sel: true },
+            { name: 'iroost-herdr', agent: 'agy', age: '15s', state: '·', color: 'c-dim', task: 'no task yet', branch: 'master · iroost-herdr' },
+            { name: 'iroost', agent: 'agy', age: '11s', state: '●', color: 'c-green', task: 'Sidebar draggable layout templates', branch: 'main · iroost', sel: true },
             { name: 'milhouse', agent: 'sonnet', age: '6s', state: '●', color: 'c-green', task: 'Hermes stack audit on connect-oracle', branch: 'main · milhouse' }
           ]
         }
       ],
       prs: [
-        { num: '#17', repo: 'lzr1-panel', title: 'feat(panel): animated refresh button next to menu', age: '4m', ci: '✓', ciCol: 'c-green' },
-        { num: '#16', repo: 'lzr1-panel', title: 'fix(pokemon): Terminal.app fallback & ANSI background', age: '28m', ci: '✓', ciCol: 'c-green' },
+        { num: '#17', repo: 'iroost', title: 'feat(panel): animated refresh button next to menu', age: '4m', ci: '✓', ciCol: 'c-green' },
+        { num: '#16', repo: 'iroost', title: 'fix(pokemon): Terminal.app fallback & ANSI background', age: '28m', ci: '✓', ciCol: 'c-green' },
         { num: '#142', repo: 'midaz', title: 'feat(ledger): idempotent batch balance query', age: '2h', ci: '⏳', ciCol: 'c-amber' }
       ]
     },
@@ -752,10 +752,10 @@
           ]
         },
         {
-          id: 'lzr1-macbook-air', type: 'local', status: 'online', gap: 18, maxH: 190,
+          id: 'iroost-macbook-air', type: 'local', status: 'online', gap: 18, maxH: 190,
           sessions: [
-            { name: 'lzr1-herdr', agent: 'agy', age: '15s', state: '·', color: 'c-dim', task: 'no task yet', branch: 'master · lzr1-herdr' },
-            { name: 'lzr1-panel', agent: 'agy', age: '11s', state: '●', color: 'c-green', task: 'Sidebar draggable layout templates', branch: 'main · lzr1-panel', sel: true },
+            { name: 'iroost-herdr', agent: 'agy', age: '15s', state: '·', color: 'c-dim', task: 'no task yet', branch: 'master · iroost-herdr' },
+            { name: 'iroost', agent: 'agy', age: '11s', state: '●', color: 'c-green', task: 'Sidebar draggable layout templates', branch: 'main · iroost', sel: true },
             { name: 'milhouse', agent: 'sonnet', age: '6s', state: '●', color: 'c-green', task: 'Hermes stack audit on connect-oracle', branch: 'main · milhouse' }
           ]
         },
@@ -768,9 +768,9 @@
         }
       ],
       prs: [
-        { num: '#17', repo: 'lzr1-panel', title: 'feat(panel): animated refresh button next to menu', age: '4m', ci: '✓', ciCol: 'c-green' },
-        { num: '#16', repo: 'lzr1-panel', title: 'fix(pokemon): Terminal.app fallback & ANSI background', age: '28m', ci: '✓', ciCol: 'c-green' },
-        { num: '#15', repo: 'lzr1-panel', title: 'feat(panel): Ghostty splash fix, menu & agy support', age: '1h', ci: '✓', ciCol: 'c-green' },
+        { num: '#17', repo: 'iroost', title: 'feat(panel): animated refresh button next to menu', age: '4m', ci: '✓', ciCol: 'c-green' },
+        { num: '#16', repo: 'iroost', title: 'fix(pokemon): Terminal.app fallback & ANSI background', age: '28m', ci: '✓', ciCol: 'c-green' },
+        { num: '#15', repo: 'iroost', title: 'feat(panel): Ghostty splash fix, menu & agy support', age: '1h', ci: '✓', ciCol: 'c-green' },
         { num: '#418', repo: 'midaz', title: 'feat(transaction): multi-asset posting validation', age: '3h', ci: '⏳', ciCol: 'c-amber' },
         { num: '#89', repo: 'flowker', title: 'fix(temporal): worker graceful drain on SIGTERM', age: '6h', ci: '✓', ciCol: 'c-green' }
       ]
@@ -787,10 +787,10 @@
           ]
         },
         {
-          id: 'lzr1-macbook-air', type: 'local', status: 'online', gap: 18, maxH: 180,
+          id: 'iroost-macbook-air', type: 'local', status: 'online', gap: 18, maxH: 180,
           sessions: [
-            { name: 'lzr1-herdr', agent: 'agy', age: '15s', state: '·', color: 'c-dim', task: 'no task yet', branch: 'master · lzr1-herdr' },
-            { name: 'lzr1-panel', agent: 'agy', age: '11s', state: '●', color: 'c-green', task: 'Sidebar draggable layout templates', branch: 'main · lzr1-panel', sel: true },
+            { name: 'iroost-herdr', agent: 'agy', age: '15s', state: '·', color: 'c-dim', task: 'no task yet', branch: 'master · iroost-herdr' },
+            { name: 'iroost', agent: 'agy', age: '11s', state: '●', color: 'c-green', task: 'Sidebar draggable layout templates', branch: 'main · iroost', sel: true },
             { name: 'milhouse', agent: 'sonnet', age: '6s', state: '●', color: 'c-green', task: 'Hermes stack audit on connect-oracle', branch: 'main · milhouse' },
             { name: 'dotfiles-zsh', agent: 'agy', age: '35m', state: '·', color: 'c-dim', task: 'Ghostty keybind sync', branch: 'main · dotfiles' }
           ]
@@ -806,9 +806,9 @@
         }
       ],
       prs: [
-        { num: '#17', repo: 'lzr1-panel', title: 'feat(panel): animated refresh button next to menu', age: '4m', ci: '✓', ciCol: 'c-green' },
-        { num: '#16', repo: 'lzr1-panel', title: 'fix(pokemon): Terminal.app fallback & ANSI background', age: '28m', ci: '✓', ciCol: 'c-green' },
-        { num: '#15', repo: 'lzr1-panel', title: 'feat(panel): Ghostty splash fix, menu & agy support', age: '1h', ci: '✓', ciCol: 'c-green' },
+        { num: '#17', repo: 'iroost', title: 'feat(panel): animated refresh button next to menu', age: '4m', ci: '✓', ciCol: 'c-green' },
+        { num: '#16', repo: 'iroost', title: 'fix(pokemon): Terminal.app fallback & ANSI background', age: '28m', ci: '✓', ciCol: 'c-green' },
+        { num: '#15', repo: 'iroost', title: 'feat(panel): Ghostty splash fix, menu & agy support', age: '1h', ci: '✓', ciCol: 'c-green' },
         { num: '#418', repo: 'midaz', title: 'feat(transaction): multi-asset posting validation', age: '3h', ci: '⏳', ciCol: 'c-amber' },
         { num: '#89', repo: 'flowker', title: 'fix(temporal): worker graceful drain on SIGTERM', age: '6h', ci: '✓', ciCol: 'c-green' },
         { num: '#204', repo: 'tracer', title: 'feat(otel): batch span exporter backpressure', age: '9h', ci: '✓', ciCol: 'c-green' },

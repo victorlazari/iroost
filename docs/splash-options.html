@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>lzr1 Splash Options</title>
+<title>iroost Splash Options</title>
 <!-- Template: ring:visualizing standard.html -->
-<!-- Artifact brief: Audience: the user choosing the opening animation for lzr1-panel (shown on install and on every open, about 5s, any key skips). Physical scene: a wall of ten small terminals, each playing one candidate. Source facts: logo is LZR1 over a word alternating TECH and PANEL in a 3D block font (box-drawing shadow); a status line and progress bar sit at the bottom; messages name real work (profiles, machines, sessions, projects) plus fun lines; the terminal version must respect any window size. Entities: the ten candidates; the logo; the status line; the bar. Hierarchy: the animation first, its name and one-line idea second, a replay control third. Message: compare the ten and pick a number. Non-invention boundary: counts in the messages are sample values, labeled as such; colors are mapped to the Lerian tokens here, the terminal uses its 256-color palette. -->
+<!-- Artifact brief: Audience: the user choosing the opening animation for iroost (shown on install and on every open, about 5s, any key skips). Physical scene: a wall of ten small terminals, each playing one candidate. Source facts: logo is LZR1 over a word alternating TECH and PANEL in a 3D block font (box-drawing shadow); a status line and progress bar sit at the bottom; messages name real work (profiles, machines, sessions, projects) plus fun lines; the terminal version must respect any window size. Entities: the ten candidates; the logo; the status line; the bar. Hierarchy: the animation first, its name and one-line idea second, a replay control third. Message: compare the ten and pick a number. Non-invention boundary: counts in the messages are sample values, labeled as such; colors are mapped to the Lerian tokens here, the terminal uses its 256-color palette. -->
 <!-- Visual thesis: a contact sheet of live terminals; every frame uses the same logo, bar and messages so only the motion differs. -->
 <!-- Design choices: 1) one shared character-grid renderer, so every option is honest about what a terminal can draw; 2) identical bottom status and bar across cards, isolating the animation as the only variable; 3) cards numbered 1-10 with a replay button, so the choice is a number; 4) the grid redraws only while a card is on screen. -->
 <!-- ============================================
@@ -501,8 +501,8 @@ p {
 
 
 <section class="animate" style="--i:0">
-<h1>lzr1 splash: pick one</h1>
-<p class="sub">Ten candidates for the animation lzr1-panel plays on install and every time it opens: about 5 seconds, any key skips it. All ten use the same logo, status messages and loading bar, so only the motion differs. The counts in the messages are sample values; in the terminal they come from your real profiles. Option 10, BIOS boot, is the one lzr1-panel plays (chosen on 27 Oct 2026); the others stay here for reference.</p>
+<h1>iroost splash: pick one</h1>
+<p class="sub">Ten candidates for the animation iroost plays on install and every time it opens: about 5 seconds, any key skips it. All ten use the same logo, status messages and loading bar, so only the motion differs. The counts in the messages are sample values; in the terminal they come from your real profiles. Option 10, BIOS boot, is the one iroost plays (chosen on 27 Oct 2026); the others stay here for reference.</p>
 </section>
 <div class="grid" id="grid"></div>
 <p class="note">Colors here use the Lerian palette. In the terminal, the logo uses a cyan-to-magenta 256-color gradient, and every option fits any window size, falling back to a one-line logo in small terminals.</p>
@@ -545,7 +545,7 @@ function word(w){var r=["","","","","",""];w.split("").forEach(function(c){for(v
  var wd=r[0].length-1,pad=Math.floor((LW-wd)/2);return r.map(function(s){s=s.slice(0,-1);return " ".repeat(pad)+s+" ".repeat(LW-pad-wd)})}
 var LZR=word("LZR1"),TECH=word("TECH"),PANEL=word("PANEL");
 var X0=(W-LW)>>1,Y0=1;
-var MSG=[[0,"booting lzr1 core"],[.10,"loading your profiles… 2 found"],[.25,"✓ oracle-server online · 1 session · 2 projects"],
+var MSG=[[0,"booting iroost core"],[.10,"loading your profiles… 2 found"],[.25,"✓ oracle-server online · 1 session · 2 projects"],
 [.45,"counting your sessions… 3 live on 2 machines"],[.60,"indexing your projects… 13 repositories"],[.72,"reticulating tmux splines"],
 [.82,"teaching Claude where your code lives"],[.92,"ready. go build something."]];
 var SPIN="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏",GL="░▒▓█▚▞■◆#%&@01<>/",HEX="0123456789abcdef";
@@ -617,7 +617,7 @@ var V=[
   drawLogo(b,t,{cell:function(x,r,ch,k){if(!isFill(ch))return[ch,"sh"];var v=(lx*(x/LW-.5)+ly*(r/13-.5))*2+.5;
    return[v>.75?"█":v>.45?"▓":v>.2?"▒":"░",v>.75?"sn":k]}});tag(b,t,14)}},
 {n:"BIOS boot",d:"A fast retro boot log checks your machines, then the logo slams in with a screen shake.",
- f:function(b,t,f){var L=["LZR1 BIOS v0.1.0  (c) lzr1 tech","CPU: claude-opus  ·  RAM: 640K ought to be enough",
+ f:function(b,t,f){var L=["LZR1 BIOS v0.1.0  (c) iroost tech","CPU: claude-opus  ·  RAM: 640K ought to be enough",
    "detecting profiles ......... 2","oracle-server .............. [ OK ]","macbook-pro-lazari ......... [ OK ]","mounting ~/lerian/repositories  13 repos","starting tmux ... ok"];
   if(t<1.6){var n=Math.floor(t/1.6*L.length*1.2);for(var i=0;i<Math.min(n,L.length);i++)b.text(2,1+i,L[i],L[i].indexOf("OK")>0?"ok":"l3");if(f%2)b.set(2+(L[Math.min(n,L.length-1)]||"").length,1+Math.min(n,L.length-1),"█","sn");return}
   var s=t-1.6,sh=s<.6?Math.round((Math.random()-.5)*4*(1-s/.6)):0;
