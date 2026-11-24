@@ -35,9 +35,19 @@ jobs:
 
       - name: Test the command line and the move from lzr1-panel
         run: |
-          command -v zsh >/dev/null || sudo apt-get install -y --no-install-recommends zsh
+          command -v zsh >/dev/null && command -v tmux >/dev/null ||
+            sudo apt-get install -y --no-install-recommends zsh tmux
+          zsh -n bin/iroost lib/splash.zsh && bash -n install.sh
           sh tests/cli.sh
           bash tests/migrate.sh
+
+      # Each runs on its own tmux socket and temporary HOME, with stand-ins for ssh and gh: no network.
+      - name: Test the refresh (session scan, stale machines, slow GitHub, no orphan panels)
+        run: |
+          sh tests/collector.sh
+          sh tests/refresh-state.sh
+          sh tests/pr-cold.sh
+          sh tests/freeze.sh
 
       - name: Release
         env:

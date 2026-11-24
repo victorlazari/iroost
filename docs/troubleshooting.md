@@ -436,9 +436,9 @@ not happen. A Ghostty split cannot be sent one.
 
 **Fix:** in a Ghostty split, click `[≡ menu]` again. You can also open the row's menu with **`m`**.
 
-While the panel reloads its list (just after a menu, after the window is resized or a phone turned, or on its
-15-second refresh), fzf ignores clicks and keys. When your machines answer slowly, a click right then does nothing.
-Click again.
+While fzf swaps in a new list (just after a menu, after the window is resized or a phone turned, or as a refresh
+redraws), it ignores clicks and keys for that moment. The list is redrawn from what the panel already has, so the moment
+is short even when a machine answers slowly; a click right then does nothing. Click again.
 
 ### Clicks do nothing at all
 
@@ -762,12 +762,21 @@ GitHub answers with a new one. If it stays old, run `iroost doctor`: it shows wh
 
 ### The panel freezes, or the machine's load climbs after a few panels
 
-fzf ignores clicks and keys while the panel builds its list, and older versions had three ways to make that long: a
-panel closed from its tmux layout never ended (its `_panel`, `_quit` and `_spotpoll` stayed alive, each asking Spotify
-for the track every 2 seconds, with no limit on the wait), a Spotify that did not answer piled up `osascript` calls, and
-a refresh waited for the slowest machine and for GitHub. Now a quitting panel flags its pollers to stop, Spotify gets 3
-seconds, a machine 8, the pull requests refresh on their own, and `iroost open` ends panels a dead layout left.
+Older versions had three ways to freeze it: a panel closed from its tmux layout never ended (its `_panel`, `_quit` and
+`_spotpoll` stayed alive, each asking Spotify for the track every 2 seconds, with no limit on the wait), a Spotify that
+did not answer piled up `osascript` calls, and a refresh waited for the slowest machine and for GitHub. Now a quitting
+panel flags its pollers to stop, Spotify gets 3 seconds, a machine 8, each machine's sessions show as soon as it
+answers, the pull requests refresh on their own (only a panel with no list yet waits for its first one), and
+`iroost open` ends panels a dead layout left.
 
 **Fix:** update the panel (`git pull`) and run `iroost open`: it ends the old ones. By hand:
-`ps -axo pid,ppid,command | grep 'iroost _'` shows them, and a `_panel` whose parent (`ppid`) is `1` is dead:
+`ps -axo pid,ppid,command | grep 'iroost _'` shows them, and a `_panel` whose parent (`ppid`) is `1` is dead (on
+Linux the parent can be your `systemd --user` instead, which takes in orphans there; older versions missed those):
 `kill -9` it. `pkill -f 'iroost _spotpoll'` ends the Spotify pollers.
+
+### A machine's heading says `stale`
+
+Its machine did not answer the last refresh within 8 seconds (down, asleep, a slow SSH or a tmux server that refuses
+you). Its last rows stay, marked stale, rather than vanishing, and they raise no alerts. The other machines' rows keep
+updating. iroost asks it again once a minute, or now with `r`; check it with `iroost profile test PROFILE`. A machine
+whose tmux server is simply not running answers "no sessions": its heading is not stale and it shows no rows.
