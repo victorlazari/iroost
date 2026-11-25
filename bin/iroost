@@ -36,7 +36,10 @@
 # Profiles live in ~/.config/iroost/profiles/<name>.conf, outside the repository: hosts, keys and paths are yours.
 emulate -L zsh
 setopt pipe_fail extended_glob
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+for _d in "$HOME/.local/bin" /opt/homebrew/bin /usr/local/bin; do
+  [[ :$PATH: == *:"$_d":* ]] || PATH="$PATH:$_d"
+done
+export PATH
 zmodload zsh/langinfo 2>/dev/null  # every iroost call starts a new zsh: no forks (locale, mkdir, chmod, head) on the way in
 [[ ${(L)langinfo[CODESET]} == utf*8 ]] ||
   { [[ $OSTYPE == darwin* ]] && export LC_ALL=en_US.UTF-8 || export LC_ALL=C.UTF-8 }
@@ -1744,27 +1747,44 @@ _suggest() {
 
 case $1 in
 
+_wheel)  # _wheel up|down [MS]: fzf's transform for a wheel event; prints the one-row move, or nothing when the last
+         # one was less than MS (IROOST_WHEEL_MS, 70) ago. A trackpad flick sends dozens at once: left alone, fzf
+         # took every one and the highlight flew past the session you wanted.
+  zmodload zsh/datetime
+  local ms=${3:-${IROOST_WHEEL_MS:-70}} wf=$STATE/wheel last=0
+  [[ $ms == <-> ]] || ms=70
+  [[ $2 == (up|down) ]] || exit 0
+  [[ -r $wf ]] && last=$(<$wf)
+  [[ $last == <->(.<->|) ]] || last=0
+  (( (EPOCHREALTIME - last) * 1000 >= ms )) || exit 0
+  print -rn -- $EPOCHREALTIME >$wf
+  print -r -- $2
+  ;;
+
 _reap)  # _reap: end the panels (and their quits and viewers) a dead layout left running: they poll Spotify for ever
   # An orphan's parent is PID 1, or on Linux the user's service manager when it adopts orphans (systemd --user): find
   # it by leaving a process of our own behind (its parent, this subshell, ends at once) and reading who took it.
   local pid ppid rest adopter=1
+  local self_real=$SELF self_raw=${0:a}
   [[ $OSTYPE == darwin* ]] || adopter=$(zmodload zsh/system; sh -c 'n=0
     while [ $n -lt 100 ] && [ "$(ps -o ppid= -p $$ | tr -d " ")" = "$1" ]; do sleep 0.01; n=$((n+1)); done
     ps -o ppid= -p $$ | tr -d " "' sh $sysparams[pid] &!)
   ps -axo pid=,ppid=,command= | while read -r pid ppid rest; do
-    [[ ( $ppid == 1 || $ppid == $adopter ) && $rest == *" $SELF "(_panel|_quit|_viewer)" "<-> ]] &&
+    [[ ( $ppid == 1 || $ppid == $adopter ) && ( $rest == *" $self_real "(_panel|_quit|_viewer)" "<-> || $rest == *" $self_raw "(_panel|_quit|_viewer)" "<-> ) ]] &&
       kill -KILL $pid 2>/dev/null
   done
+  :
   ;;
 
 close)  # close: end every open iroost (panels, viewers, layouts, their pollers); the machines' tmux sessions stay
   local pid ppid rest f n=0
+  local self_real=$SELF self_raw=${0:a}
   for f in $STATE/<->.mode(N); do : >$STATE/${${f:t}%.mode}.quit; done  # pollers end first
   tmux -L iroost kill-server 2>/dev/null  # the layouts (a tmux layout, a browser's) live on this server only
   ps -axo pid=,ppid=,command= | while read -r pid ppid rest; do
-    [[ $rest == *" $SELF "(_panel|_quit|_viewer|_ticker|_spotpoll)" "<->* ]] || continue
-    [[ $rest == *" $SELF _viewer "* ]] && pkill -TERM -P $pid 2>/dev/null  # its attach: detaches, the session stays
-    kill -TERM $pid 2>/dev/null && [[ $rest == *" $SELF _panel "* ]] && (( n++ ))
+    [[ $rest == *" $self_real "(_panel|_quit|_viewer|_ticker|_spotpoll)" "<->* || $rest == *" $self_raw "(_panel|_quit|_viewer|_ticker|_spotpoll)" "<->* ]] || continue
+    [[ $rest == *" $self_real _viewer "* || $rest == *" $self_raw _viewer "* ]] && pkill -TERM -P $pid 2>/dev/null  # its attach: detaches, the session stays
+    kill -TERM $pid 2>/dev/null && [[ $rest == *" $self_real _panel "* || $rest == *" $self_raw _panel "* ]] && (( n++ ))
   done
   print -r -- "closed $n iroost panel(s); the tmux sessions keep running"
   ;;
@@ -1814,7 +1834,7 @@ start)  # start PROFILE opus|sonnet|agy|opencode NAME [claude, agy or opencode a
     if [ -n "$cmd" ]; then tmux new-session -d -s "$name" -c "$dir" -x 200 -y 50 "$cmd" || exit 1
     else tmux new-session -d -s "$name" -c "$dir" -x 200 -y 50 || exit 1; fi
     tmux set-option -t "=$name:" window-size smallest 2>/dev/null || :
-    tmux set-option -t "=$name:" set-titles on 2>/dev/null; tmux set-option -t "=$name:" set-titles-string '#{session_name}' 2>/dev/null
+    tmux set-option -t "=$name:" set-titles on 2>/dev/null; tmux set-option -t "=$name:" set-titles-string "#{session_name}" 2>/dev/null
     tmux set-option -t "=$name:" @iroost_model "$5"
     if [ "$6" = term ]; then tmux set-option -t "=$name:" @iroost_agent term; echo started; exit 0; fi
     # opencode asks no folder trust and has no Remote Control link: started once it outlives its first 2s.
@@ -2091,7 +2111,7 @@ attach)  # attach PROFILE NAME: this terminal into a session (Ctrl-b d leaves it
   ;;
 
 list)
-  local it; for it in "${(@0)$(list_rows)}"; do [[ -n $it ]] && print -r -- ${it#*$'\t'}; done
+  local it; for it in "${(@0)$(list_rows)}"; do [[ -n $it ]] && print -r -- ${it#*$'\t'}; done; :
   ;;
 
 _list)  # _list ID: rows for fzf, cached for _pos
@@ -2322,6 +2342,9 @@ _ticker)  # _ticker ID PORT: show the first session in the viewer (a reconnectin
     local n=0 key
     while sleep 1; do
       [[ -e $STATE/$id.quit ]] && exit 0
+      # Mouse reporting back on, in case a menu's own fzf switched it off as it closed: with it off the terminal shows
+      # the text-selection cursor and a click on a row never reaches the panel. Switching it on again changes nothing.
+      print -rn -- $'\e[?1000h\e[?1002h\e[?1006h' >/dev/tty 2>/dev/null
       if [[ -s $STATE/$id.follow ]]; then
         key=$(<$STATE/$id.follow); rm -f $STATE/$id.follow
         $SELF _pos $id $port $key &
@@ -3187,6 +3210,7 @@ _panel)  # _panel ID
     --color='header:dim,footer:yellow,pointer:yellow,current-fg:bold' \
     --bind "start:reload(IROOST_CACHED=1 $S _list $id)+execute-silent($S _refresh $id \$FZF_PORT)+execute-silent($S _ticker $id \$FZF_PORT)+execute-silent($S _spotpoll $id \$FZF_PORT $$)$lockstart" \
     --bind "resize:transform:[ \$FZF_COLUMNS -gt 2 ] && echo 'reload(IROOST_CACHED=1 $S _list $id)'" $tap \
+    --bind "scroll-up:transform:$S _wheel up" --bind "scroll-down:transform:$S _wheel down" \
     --bind "focus:execute-silent($S _select $id {1} &)" \
     --bind "enter:transform:$S _enter $id {1}" \
     --bind "double-click:transform:$S _enter $id {1}" \
