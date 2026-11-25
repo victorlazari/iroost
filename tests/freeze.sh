@@ -2,8 +2,8 @@
 # Behaviour that keeps the sidebar from freezing: a slow helper is cut off, and a closed panel leaves nothing polling.
 # It runs a private copy of iroost (its own path, so _reap only ever matches this test's processes) and checks and
 # kills only processes it started itself: safe on a machine with real panels open.
-R=$(cd "$(dirname "$0")/.." && pwd)
-T=$(mktemp -d "${TMPDIR:-/tmp}/iroost-freeze.XXXXXX")
+R=$(cd "$(dirname "$0")/.." && pwd -P)
+T=$(cd "$(mktemp -d "${TMPDIR:-/tmp}/iroost-freeze.XXXXXX")" && pwd -P)
 mkdir -p "$T/bin" "$T/cache/iroost"; cp "$R/bin/iroost" "$T/bin/"; cp -R "$R/lib" "$T/"
 P=$T/bin/iroost
 export XDG_CACHE_HOME=$T/cache XDG_CONFIG_HOME=$T/config
